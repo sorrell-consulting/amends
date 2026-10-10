@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block site_meta %}
+  {# PNG fallbacks precede Material's primary SVG favicon. #}
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ 'assets/brand/favicon/favicon-16.png' | url }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ 'assets/brand/favicon/favicon-32.png' | url }}">
+  {{ super() }}
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ 'assets/brand/favicon/apple-touch-icon.png' | url }}">
+{% endblock %}
+{% block htmltitle %}
+  {% if page and page.file.src_uri == "index.md" %}
+    <title>{{ page.meta.title | e }}</title>
+  {% else %}
+    {{ super() }}
+  {% endif %}
+{% endblock %}
+{% block extrahead %}
+  {% if page.canonical_url %}
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ (page.meta.title or page.title or config.site_name) | e }}">
+    <meta property="og:description" content="{{ (page.meta.description or config.site_description) | e }}">
+    <meta property="og:url" content="{{ page.canonical_url }}">
+    <meta property="og:site_name" content="{{ config.site_name | e }}">
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  {# Keep Material's renderer local without fetching Mermaid on prose-only pages. #}
+  <script src="{{ 'assets/javascripts/mermaid-loader.js' | url }}"></script>
+  {{ super() }}
+{% endblock %}

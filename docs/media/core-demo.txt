@@ -1,0 +1,36 @@
+amends: correction example (memory only)
+Opening balance: 100; reorder threshold: 60; UTC daily closes.
+Namespace: core-demo; source: embedded synthetic fixtures.
+
+Before correction
+  READY; input stopped; source frontier 3; view frontier 5.
+  2026-01-01  closing balance 50
+  2026-01-02  closing balance 30
+  2026-01-03  closing balance 80
+  crossing: 2026-01-01 (close 50 < 60)
+  CORE_AGREEMENT: fixture, independent oracle, and memory view agree.
+
+After Day 1 issue changes from 50 to 30 units
+  READY; input stopped; source frontier 4; view frontier 10.
+  2026-01-01  closing balance 70
+  2026-01-02  closing balance 50
+  2026-01-03  closing balance 100
+  crossing: 2026-01-02 (close 50 < 60)
+  AlertRetracted 2026-01-01 version 2
+  AlertRaised 2026-01-02 version 1
+  BalanceStated 2026-01-01 version 2
+  BalanceStated 2026-01-02 version 2
+  BalanceStated 2026-01-03 version 2
+  CORE_AGREEMENT: fixture, independent oracle, and memory view agree.
+
+After cancelling the last activity on Day 3
+  READY; input stopped; source frontier 5; view frontier 11.
+  2026-01-01  closing balance 70
+  2026-01-02  closing balance 50
+  crossing: 2026-01-02 (close 50 < 60)
+  BalanceRetracted 2026-01-03 version 3
+  CORE_AGREEMENT: fixture, independent oracle, and memory view agree.
+
+Deletion versions remain in the memory view. CORE_AGREEMENT checks this in-memory example.
+For PostgreSQL/Redpanda verification, run: make demo MODE=correction-only
+For an owned worker crash and recovery, run: make drill DRILL=crash-mid-correction

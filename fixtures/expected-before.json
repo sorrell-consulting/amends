@@ -1,0 +1,29 @@
+{
+  "stock_key": {
+    "item": "DEMO-PART",
+    "location": "DEPOT-A"
+  },
+  "key_status": "READY",
+  "balances": [
+    {
+      "day": "2026-01-01",
+      "closing_balance": 50
+    },
+    {
+      "day": "2026-01-02",
+      "closing_balance": 30
+    },
+    {
+      "day": "2026-01-03",
+      "closing_balance": 80
+    }
+  ],
+  "active_crossing_alerts": [
+    {
+      "crossing_day": "2026-01-01",
+      "reorder_threshold": 60,
+      "closing_balance": 50
+    }
+  ],
+  "comparison_notes": "Business projection only. Message order, namespace transport prefix, cause metadata, and output versions are intentionally not prescribed."
+}

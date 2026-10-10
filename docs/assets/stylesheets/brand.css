@@ -1,0 +1,125 @@
+/* Sorrell Consulting's official palette, adapted to Material locally.
+   Source and maintenance notes: docs/media/README.md. */
+:root {
+  --md-text-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+[data-md-color-scheme="default"] {
+  color-scheme: light;
+  --sc-surface: #ffffff;
+  --sc-border: #d8ddd9;
+  --sc-soft: #eaf0eb;
+  --md-default-bg-color: #f7f6f2;
+  --md-default-fg-color: #17232b;
+  --md-default-fg-color--light: #50616b;
+  --md-default-fg-color--lighter: #78877f;
+  --md-default-fg-color--lightest: #d8ddd9;
+  --md-primary-fg-color: #245c50;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffff;
+  --md-accent-fg-color: #194638;
+  --md-accent-fg-color--transparent: #245c501a;
+  --md-accent-bg-color: #ffffff;
+  --md-code-bg-color: #ffffff;
+  --md-code-fg-color: #17232b;
+  --sc-chart-balance: #245c50;
+  --sc-chart-threshold: #875614;
+  --sc-chart-grid: #d8ddd9;
+}
+
+/* Official dark tokens from website/assets/sorrell-consulting-brand/tokens.css. */
+[data-md-color-scheme="slate"] {
+  color-scheme: dark;
+  --sc-surface: #17232b;
+  --sc-border: #2a3a3f;
+  --sc-soft: #1c2f2b;
+  --md-default-bg-color: #121b20;
+  --md-default-fg-color: #f3f1ec;
+  --md-default-fg-color--light: #a7b4b9;
+  --md-default-fg-color--lighter: #829b91;
+  --md-default-fg-color--lightest: #2a3a3f;
+  --md-primary-fg-color: #9fc4b8;
+  --md-primary-bg-color: #121b20;
+  --md-primary-bg-color--light: #121b20;
+  --md-accent-fg-color: #9fc4b8;
+  --md-accent-fg-color--transparent: #9fc4b81a;
+  --md-accent-bg-color: #121b20;
+  --md-code-bg-color: #17232b;
+  --md-code-fg-color: #f3f1ec;
+  /* Lift two Material syntax colors to AA contrast on the green-slate surface. */
+  --md-code-hl-number-color: #ec786b;
+  --md-code-hl-constant-color: #a091ea;
+  --sc-chart-balance: #9fc4b8;
+  --sc-chart-threshold: #edc47c;
+  --sc-chart-grid: #2a3a3f;
+}
+
+[data-md-color-scheme] {
+  --md-typeset-color: var(--md-default-fg-color);
+  --md-typeset-a-color: var(--md-primary-fg-color);
+  --md-footer-bg-color: var(--sc-soft);
+  --md-footer-bg-color--dark: var(--sc-soft);
+  --md-footer-fg-color: var(--md-default-fg-color);
+  --md-footer-fg-color--light: var(--md-default-fg-color--light);
+  --md-footer-fg-color--lighter: var(--md-default-fg-color--light);
+}
+
+.md-header {
+  background: var(--sc-surface);
+  color: var(--md-default-fg-color);
+  border-bottom: 1px solid var(--sc-border);
+  box-shadow: none;
+}
+.md-header .md-logo { opacity: 1; }
+.md-logo .sc-logo { display: block; width: 7.2rem; }
+.md-logo .sc-logo img { width: 100%; height: auto; }
+.md-logo .sc-logo--mark { display: none; width: 1.6rem; }
+.md-logo .sc-logo .sc-logo__dark { display: none; }
+[data-md-color-scheme="slate"] .md-logo .sc-logo__light { display: none; }
+[data-md-color-scheme="slate"] .md-logo .sc-logo__dark { display: block; }
+.md-header .sc-business-link {
+  display: inline-flex;
+  align-items: center;
+  padding-block: 0;
+  min-height: 2rem;
+}
+@media (max-width: 59.984375em) {
+  .md-header .sc-business-link .sc-logo--horizontal { display: none; }
+  .md-header .sc-business-link .sc-logo--mark { display: block; }
+}
+@media (max-width: 76.234375em) {
+  .md-nav--primary .md-nav__title[for="__drawer"] {
+    background: var(--sc-surface);
+    color: var(--md-default-fg-color);
+  }
+}
+.md-header__topic { font-weight: 600; }
+.md-search__form, .md-search__form:hover {
+  background-color: var(--sc-soft);
+  color: var(--md-default-fg-color);
+}
+.md-search__input::placeholder,
+.md-search__input + .md-search__icon { color: var(--md-default-fg-color--light); }
+
+.md-typeset { line-height: 1.65; }
+.md-typeset h1, .md-typeset h2, .md-typeset h3 {
+  color: var(--md-default-fg-color);
+  font-weight: 600;
+  text-wrap: balance;
+}
+.md-typeset h1 { letter-spacing: -.035em; }
+.md-typeset h2 { letter-spacing: -.025em; }
+.md-typeset h3 { letter-spacing: -.015em; }
+.md-typeset a:not(.md-button):not(.headerlink) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .22em;
+}
+.md-typeset a:hover { text-decoration-thickness: 2px; }
+.md-typeset table:not([class]) { background-color: var(--sc-surface); }
+.md-typeset pre > code { border-radius: .25rem; }
+/* Keep keyboard focus apparent on the light header and both content palettes. */
+body :is(a, button, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--md-primary-fg-color);
+  outline-offset: 2px;
+}

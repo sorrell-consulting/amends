@@ -1,0 +1,1 @@
+{"txn_id":"RECEIPT-003","revision":2,"kind":"CANCEL","stock_key":{"item":"DEMO-PART","location":"DEPOT-A"},"valid_time":"2026-01-03T12:00:00Z","qty":0,"source_time":"2026-01-04T10:00:00Z"}

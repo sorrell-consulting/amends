@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="720" viewBox="0 0 1140 720" role="img" aria-labelledby="title desc">
+<title id="title">Atomic state changes; asynchronous publication</title>
+<desc id="desc">Implemented eight-component reference architecture. The worker atomically persists state, outputs, quarantine, outbox and source position in Postgres. A relay publishes to an output topic, and a durable version-aware view materializes messages. The verifier independently compares a complete source prefix and the view at a bounded cut.</desc>
+<defs>
+<marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+<path d="M0,0 L8,4 L0,8 Z" fill="#50616b"/>
+</marker>
+</defs>
+<rect width="100%" height="100%" fill="#f7f6f2"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="27" font-weight="700" fill="#17232b" text-anchor="start">
+<tspan x="36" y="44">Atomic state changes; asynchronous publication</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="500" fill="#50616b" text-anchor="start">
+<tspan x="36" y="78">REFERENCE ARCHITECTURE  /  amends implementation</tspan>
+</text>
+<rect x="460" y="113" width="432" height="224" rx="16" fill="#eaf0eb" stroke="#245c50" stroke-width="1.7"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#245c50" text-anchor="middle">
+<tspan x="676" y="135">ONE POSTGRES TRANSACTION</tspan>
+</text>
+<rect x="36" y="162" width="190" height="143" rx="12" fill="#ffffff" stroke="#d8ddd9" stroke-width="1.5"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#17232b" text-anchor="middle">
+<tspan x="131.0" y="193">Generator</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#17232b" text-anchor="middle">
+<tspan x="131.0" y="227">Tiny staged fixture</tspan>
+<tspan x="131.0" y="252">Optional seeded</tspan>
+<tspan x="131.0" y="277">histories</tspan>
+</text>
+<rect x="254" y="162" width="190" height="143" rx="12" fill="#ffffff" stroke="#d8ddd9" stroke-width="1.5"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#17232b" text-anchor="middle">
+<tspan x="349.0" y="193">Source topic</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#17232b" text-anchor="middle">
+<tspan x="349.0" y="227">Retained raw history</tspan>
+<tspan x="349.0" y="252">Keyed by stock key</tspan>
+<tspan x="349.0" y="277">Fixed source identity</tspan>
+</text>
+<rect x="472" y="162" width="190" height="143" rx="12" fill="#ffffff" stroke="#d8ddd9" stroke-width="1.5"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#17232b" text-anchor="middle">
+<tspan x="567.0" y="193">Workers ×2</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#17232b" text-anchor="middle">
+<tspan x="567.0" y="227">Revision authority</tspan>
+<tspan x="567.0" y="252">Rewind, refold, diff</tspan>
+<tspan x="567.0" y="277">Serial per partition</tspan>
+</text>
+<rect x="690" y="162" width="190" height="143" rx="12" fill="#ffffff" stroke="#245c50" stroke-width="1.5"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#17232b" text-anchor="middle">
+<tspan x="785.0" y="193">Postgres</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#17232b" text-anchor="middle">
+<tspan x="785.0" y="227">State + versions</tspan>
+<tspan x="785.0" y="252">Quarantine + outbox</tspan>
+<tspan x="785.0" y="277">Position + epoch</tspan>
+</text>
+<rect x="908" y="162" width="190" height="143" rx="12" fill="#ffffff" stroke="#d8ddd9" stroke-width="1.5"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#17232b" text-anchor="middle">
+<tspan x="1003.0" y="193">Relay</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#17232b" text-anchor="middle">
+<tspan x="1003.0" y="227">Stored envelope</tspan>
+<tspan x="1003.0" y="252">Publish; await ACK</tspan>
+<tspan x="1003.0" y="277">Then mark sent</tspan>
+</text>
+<path d="M226,233.5 H250" fill="none" stroke="#50616b" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M444,233.5 H468" fill="none" stroke="#50616b" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M662,233.5 H686" fill="none" stroke="#50616b" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M880,233.5 H904" fill="none" stroke="#50616b" stroke-width="2.4" marker-end="url(#arrow)"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="500" fill="#245c50" text-anchor="middle">
+<tspan x="676" y="326">commit or roll back the whole input decision</tspan>
+</text>
+<rect x="472" y="435" width="190" height="143" rx="12" fill="#ffffff" stroke="#d8ddd9" stroke-width="1.5"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#17232b" text-anchor="middle">
+<tspan x="567.0" y="467">amendsctl</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="15.5" font-weight="400" fill="#17232b" text-anchor="middle">
+<tspan x="567.0" y="501">Independent oracle</tspan>
+<tspan x="567.0" y="526">Bounded verification</tspan>
+<tspan x="567.0" y="551">Inspect, replay, rebuild</tspan>
+</text>
+<rect x="690" y="435" width="190" height="143" rx="12" fill="#ffffff" stroke="#d8ddd9" stroke-width="1.5"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#17232b" text-anchor="middle">
+<tspan x="785.0" y="467">View</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="15.5" font-weight="400" fill="#17232b" text-anchor="middle">
+<tspan x="785.0" y="501">Highest version per ID</tspan>
+<tspan x="785.0" y="526">Durable withdrawals</tspan>
+<tspan x="785.0" y="551">Own input position</tspan>
+</text>
+<rect x="908" y="435" width="190" height="143" rx="12" fill="#ffffff" stroke="#d8ddd9" stroke-width="1.5"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#17232b" text-anchor="middle">
+<tspan x="1003.0" y="467">Output topic</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="15.5" font-weight="400" fill="#17232b" text-anchor="middle">
+<tspan x="1003.0" y="501">Balances + crossings</tspan>
+<tspan x="1003.0" y="526">Withdrawals + status</tspan>
+<tspan x="1003.0" y="551">At-least-once delivery</tspan>
+</text>
+<path d="M1003,305 V431" fill="none" stroke="#50616b" stroke-width="2.4" marker-end="url(#arrow)"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="500" fill="#50616b" text-anchor="start">
+<tspan x="1015" y="374">At least</tspan>
+<tspan x="1015" y="394">once</tspan>
+</text>
+<path d="M908,506 H884" fill="none" stroke="#50616b" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M690,506 H666" stroke-dasharray="7 5" fill="none" stroke="#50616b" stroke-width="2.4" marker-end="url(#arrow)"/>
+<path d="M349,305 V506 H468" fill="none" stroke="#50616b" stroke-width="2.4" marker-end="url(#arrow)" stroke-dasharray="7 5"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#245c50" text-anchor="start">
+<tspan x="360" y="383">Complete source</tspan>
+<tspan x="360" y="408">prefix H</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="500" fill="#245c50" text-anchor="middle">
+<tspan x="785" y="410">Materialized view at boundary O</tspan>
+</text>
+<path d="M785,337 V359 H567 V431" fill="none" stroke="#50616b" stroke-width="2.4" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="500" fill="#245c50" text-anchor="middle">
+<tspan x="700" y="381">Epoch / progress / outbox checks</tspan>
+</text>
+<rect x="36" y="606" width="1062" height="57" rx="10" fill="#eaf0eb" stroke="#eaf0eb" stroke-width="1.5"/>
+<text font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="600" fill="#17232b" text-anchor="middle">
+<tspan x="567" y="629">OBSERVE  source + view lag · rewind cost · outbox age · conflicts</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#17232b" text-anchor="middle">
+<tspan x="567" y="652">VERIFY  source and output frontiers · configuration · complete comparison status</tspan>
+</text>
+<text font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="400" fill="#50616b" text-anchor="start">
+<tspan x="36" y="698">Compare current business state, not publication history. Progress and trust status are explicit.</tspan>
+</text>
+</svg>

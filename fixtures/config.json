@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "fixture_name": "correction-demo",
+  "ledger_origin": "2026-01-01T00:00:00Z",
+  "timezone": "UTC",
+  "balance_model": "sparse_activity_days",
+  "alert_model": "daily_close_downward_crossing",
+  "stock_keys": [
+    {
+      "item": "DEMO-PART",
+      "location": "DEPOT-A",
+      "opening_balance": 100,
+      "reorder_threshold": 60
+    }
+  ],
+  "notes": "Synthetic specification fixture, exercised by the core example and independent scenario tests."
+}

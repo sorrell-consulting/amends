@@ -1,0 +1,6 @@
+{
+  "stock_key": {"item": "DEMO-OTHER", "location": "DEPOT-A"},
+  "key_status": "READY",
+  "balances": [{"day": "2026-01-01", "closing_balance": 75}],
+  "active_crossing_alerts": []
+}

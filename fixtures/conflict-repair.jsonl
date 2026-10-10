@@ -1,0 +1,1 @@
+{"txn_id":"ISSUE-001","revision":3,"kind":"AMEND","stock_key":{"item":"DEMO-PART","location":"DEPOT-A"},"valid_time":"2026-01-01T12:00:00Z","qty":-20,"source_time":"2026-01-05T10:00:00Z"}

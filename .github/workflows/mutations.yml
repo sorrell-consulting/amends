@@ -1,0 +1,56 @@
+name: Isolated guard mutations
+
+# Mutant execution is separate from the normal push/PR build and test path.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guards:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18.6-bookworm
+        env:
+          POSTGRES_USER: amends
+          POSTGRES_PASSWORD: amends-local-only
+          POSTGRES_DB: amends
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U amends -d amends"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      GOWORK: 'off'
+      AMENDS_TEST_DATABASE_URL: postgres://amends:amends-local-only@127.0.0.1:5432/amends?sslmode=disable
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
+      - name: Check the unmodified implementation and runner
+        run: make evidence
+      - name: Run the real SQL suite without mutations
+        run: make evidence-postgres
+      - name: Exercise named guard mutations in temporary source copies
+        run: make evidence-mutations
+      - name: Retain baselines, source snapshots, edits, and assertion results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: isolated-guard-mutation-evidence
+          path: |
+            artifacts/evidence/
+            artifacts/postgres/
+            artifacts/mutations/
+          if-no-files-found: error
+          retention-days: 14

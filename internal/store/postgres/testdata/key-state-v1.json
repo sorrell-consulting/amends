@@ -1,0 +1,42 @@
+{
+  "Identities": {
+    "cancelled": {
+      "Highest": 2,
+      "Revisions": {
+        "1": [{
+          "Transaction": {"txn_id":"cancelled","revision":1,"kind":"NEW","stock_key":{"item":"ITEM","location":"DEPOT"},"valid_time":"2026-01-01T00:00:00Z","qty":-50,"source_time":"2026-01-03T00:00:00Z"},
+          "Sources": [{"source":"fixture-v1","partition":0,"offset":0}]
+        }],
+        "2": [{
+          "Transaction": {"txn_id":"cancelled","revision":2,"kind":"CANCEL","stock_key":{"item":"ITEM","location":"DEPOT"},"valid_time":"2026-01-01T00:00:00Z","qty":0,"source_time":"2026-01-03T00:00:00Z"},
+          "Sources": [{"source":"fixture-v1","partition":0,"offset":1},{"source":"fixture-v1","partition":0,"offset":2}]
+        }]
+      }
+    },
+    "repaired": {
+      "Highest": 2,
+      "Revisions": {
+        "1": [
+          {
+            "Transaction": {"txn_id":"repaired","revision":1,"kind":"NEW","stock_key":{"item":"ITEM","location":"DEPOT"},"valid_time":"2026-01-02T00:00:00Z","qty":7,"source_time":"2026-01-03T00:00:00Z"},
+            "Sources": [{"source":"fixture-v1","partition":0,"offset":3}]
+          },
+          {
+            "Transaction": {"txn_id":"repaired","revision":1,"kind":"NEW","stock_key":{"item":"ITEM","location":"DEPOT"},"valid_time":"2026-01-02T00:00:00Z","qty":9,"source_time":"2026-01-03T00:00:00Z"},
+            "Sources": [{"source":"fixture-v1","partition":0,"offset":4}]
+          }
+        ],
+        "2": [{
+          "Transaction": {"txn_id":"repaired","revision":2,"kind":"AMEND","stock_key":{"item":"ITEM","location":"DEPOT"},"valid_time":"2026-01-02T00:00:00Z","qty":10,"source_time":"2026-01-03T00:00:00Z"},
+          "Sources": [{"source":"fixture-v1","partition":0,"offset":5}]
+        }]
+      }
+    }
+  },
+  "Projection": {
+    "stock_key": {"item":"ITEM","location":"DEPOT"},
+    "key_status": "READY",
+    "balances": [{"day":"2026-01-02","closing_balance":110}],
+    "active_crossing_alerts": []
+  }
+}

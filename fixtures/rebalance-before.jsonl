@@ -1,0 +1,6 @@
+{"txn_id":"ISSUE-001","revision":1,"kind":"NEW","stock_key":{"item":"DEMO-PART","location":"DEPOT-A"},"valid_time":"2026-01-01T12:00:00Z","qty":-50,"source_time":"2026-01-01T12:05:00Z"}
+{"txn_id":"ISSUE-001","revision":1,"kind":"NEW","stock_key":{"item":"DEMO-SECOND","location":"DEPOT-A"},"valid_time":"2026-01-01T12:00:00Z","qty":-50,"source_time":"2026-01-01T12:05:00Z"}
+{"txn_id":"ISSUE-002","revision":1,"kind":"NEW","stock_key":{"item":"DEMO-PART","location":"DEPOT-A"},"valid_time":"2026-01-02T12:00:00Z","qty":-20,"source_time":"2026-01-02T12:05:00Z"}
+{"txn_id":"ISSUE-002","revision":1,"kind":"NEW","stock_key":{"item":"DEMO-SECOND","location":"DEPOT-A"},"valid_time":"2026-01-02T12:00:00Z","qty":-20,"source_time":"2026-01-02T12:05:00Z"}
+{"txn_id":"RECEIPT-003","revision":1,"kind":"NEW","stock_key":{"item":"DEMO-PART","location":"DEPOT-A"},"valid_time":"2026-01-03T12:00:00Z","qty":50,"source_time":"2026-01-03T12:05:00Z"}
+{"txn_id":"RECEIPT-003","revision":1,"kind":"NEW","stock_key":{"item":"DEMO-SECOND","location":"DEPOT-A"},"valid_time":"2026-01-03T12:00:00Z","qty":50,"source_time":"2026-01-03T12:05:00Z"}

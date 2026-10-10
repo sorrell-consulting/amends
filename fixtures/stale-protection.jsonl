@@ -1,0 +1,2 @@
+{"txn_id":"ISSUE-001","revision":4,"kind":"AMEND","stock_key":{"item":"DEMO-PART","location":"DEPOT-A"},"valid_time":"2026-01-01T12:00:00Z","qty":-30,"source_time":"2026-01-04T10:00:00Z"}
+{"txn_id":"RECEIPT-003","revision":3,"kind":"CANCEL","stock_key":{"item":"DEMO-PART","location":"DEPOT-A"},"valid_time":"2026-01-03T12:00:00Z","qty":0,"source_time":"2026-01-04T11:00:00Z"}

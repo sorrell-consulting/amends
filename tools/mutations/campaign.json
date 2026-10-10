@@ -1,0 +1,220 @@
+[
+  {
+    "id": "M01",
+    "description": "Arrival order overrides source revision authority",
+    "package": "./test/scenarios",
+    "test": "TestHandDerivedScenarios/SC06_StaleLast",
+    "assertion": "[amends:projection-agreement]",
+    "integration": false,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/fold/fold.go",
+        "comparison": {
+          "function": "apply",
+          "left_field": "Revision",
+          "right_field": "Highest",
+          "before": ">",
+          "after": "!="
+        }
+      }
+    ]
+  },
+  {
+    "id": "M02",
+    "description": "Discard cancellation authority",
+    "package": "./test/scenarios",
+    "test": "TestHandDerivedScenarios/SC04_CancelBeforeNew",
+    "assertion": "[amends:projection-agreement]",
+    "integration": false,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/fold/fold.go",
+        "before": "\ts := previous.Clone()\n\tid, exists := s.Identities[t.TxnID]",
+        "after": "\tif t.Kind == ledger.Cancel {\n\t\treturn previous.Clone(), nil\n\t}\n\ts := previous.Clone()\n\tid, exists := s.Identities[t.TxnID]"
+      }
+    ]
+  },
+  {
+    "id": "M03",
+    "description": "Omit balance withdrawals",
+    "package": "./test/scenarios",
+    "test": "TestHandDerivedScenarios/SC14_DisappearingMiddleDay",
+    "assertion": "[amends:fixture-projection]",
+    "integration": false,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/diff/diff.go",
+        "before": "id.Family == ledger.KeyStatusFamily {",
+        "after": "(id.Family == ledger.KeyStatusFamily || id.Family == ledger.BalanceFamily) {"
+      }
+    ]
+  },
+  {
+    "id": "M04",
+    "description": "Physically delete view tombstones",
+    "package": "./test/scenarios",
+    "test": "TestSC05SC16_WithdrawalAndReappearance",
+    "assertion": "[amends:retained-deletion]",
+    "integration": false,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/view/view.go",
+        "before": "\t\ts.Rows[e.ID] = e.Clone()",
+        "after": "\t\tif e.Payload.Present {\n\t\t\ts.Rows[e.ID] = e.Clone()\n\t\t} else {\n\t\t\tdelete(s.Rows, e.ID)\n\t\t}"
+      }
+    ]
+  },
+  {
+    "id": "M05",
+    "description": "Apply delayed lower output versions",
+    "package": "./test/scenarios",
+    "test": "TestSC16_DelayedBalanceCannotRegress",
+    "assertion": "[amends:view-monotonicity]",
+    "integration": false,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/view/view.go",
+        "before": "if !exists || e.Version > old.Version {",
+        "after": "if true {"
+      }
+    ]
+  },
+  {
+    "id": "M06",
+    "description": "Accept conflicting content at an equal version",
+    "package": "./test/scenarios",
+    "test": "TestSC17_EqualVersionProtocolConflict",
+    "assertion": "[amends:equal-version-conflict]",
+    "integration": false,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/view/view.go",
+        "before": "if exists && e.Version == old.Version && !e.Equal(old) {",
+        "after": "if false && exists && e.Version == old.Version && !e.Equal(old) {"
+      }
+    ]
+  },
+  {
+    "id": "M07",
+    "description": "Commit source frontier before the processing decision",
+    "package": "./internal/store/postgres",
+    "test": "TestPostgresSC18_ConnectionDiesDuringCorrection",
+    "assertion": "[amends:processing-atomicity]",
+    "integration": true,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/store/postgres/processing.go",
+        "before": "\ttransaction, reason := fold.Validate(s.config, r)",
+        "after": "\tif _, err = t.tx.Exec(t.ctx, \"UPDATE amends_partitions SET next_offset=$3 WHERE namespace_id=$1 AND partition=$2\", s.ns, p, r.Offset+1); err != nil {\n\t\treturn err\n\t}\n\tif err = commit(t.ctx, t.tx); err != nil {\n\t\treturn err\n\t}\n\tnext, err := s.pool.Begin(t.ctx)\n\tif err != nil {\n\t\treturn err\n\t}\n\tt.tx = next\n\tif _, err = s.lock(t.ctx, t.tx, p); err != nil {\n\t\treturn err\n\t}\n\ttransaction, reason := fold.Validate(s.config, r)"
+      }
+    ]
+  },
+  {
+    "id": "M08",
+    "description": "Lose publication intent across a committed processing decision",
+    "package": "./internal/store/postgres",
+    "test": "TestPostgresSC18SC20SC21SC22_LostCommitReplies/worker/committed=true",
+    "assertion": "[amends:committed-intent]",
+    "integration": true,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/store/postgres/processing.go",
+        "before": "\t\t\tif _, err = t.tx.Exec(t.ctx, \"INSERT INTO amends_outbox(namespace_id,partition,sequence,output_id,version,envelope) VALUES($1,$2,$3,$4,$5,$6)\", s.ns, p, t.partition.Sequence, e.ID.String(), e.Version, raw); err != nil {\n\t\t\t\treturn err\n\t\t\t}",
+        "after": "\t\t\t// Publication intent was not persisted with the decision."
+      }
+    ]
+  },
+  {
+    "id": "M09",
+    "description": "Ignore the installed ownership epoch",
+    "package": "./internal/store/postgres",
+    "test": "TestPostgresSC19_BothDatabaseLockOrders/old-first=false",
+    "assertion": "[amends:epoch-fence]",
+    "integration": true,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/store/postgres/processing.go",
+        "before": "token.Epoch != p.Epoch || ",
+        "after": ""
+      }
+    ]
+  },
+  {
+    "id": "M10",
+    "description": "Commit a view row separately from its progress",
+    "package": "./internal/store/postgres",
+    "test": "TestPostgresSC18SC20SC21SC22_LostCommitReplies/view/committed=true",
+    "assertion": "[amends:view-atomicity]",
+    "integration": true,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/store/postgres/view.go",
+        "before": "\tif _, err = tx.Exec(ctx, \"UPDATE amends_view_progress SET next_offset=$3 WHERE namespace_id=$1 AND partition=$2\", s.ns, partition, state.Next[partition]); err != nil {",
+        "after": "\tif err = commit(ctx, tx); err != nil {\n\t\treturn err\n\t}\n\ttx, err = s.pool.Begin(ctx)\n\tif err != nil {\n\t\treturn err\n\t}\n\tdefer rollback(tx)\n\tif _, err = tx.Exec(ctx, \"UPDATE amends_view_progress SET next_offset=$3 WHERE namespace_id=$1 AND partition=$2\", s.ns, partition, state.Next[partition]); err != nil {"
+      }
+    ]
+  },
+  {
+    "id": "M11",
+    "description": "Keep the first conflicting revision payload",
+    "package": "./test/scenarios",
+    "test": "TestSC08_HighestConflictBothOrders",
+    "assertion": "[amends:trust-agreement]",
+    "integration": false,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "internal/fold/fold.go",
+        "before": "\tif !duplicate {\n\t\tcs = append(cs, Candidate{Transaction: t, Sources: []ledger.Coordinates{at}})",
+        "after": "\tif !duplicate && len(cs) == 0 {\n\t\tcs = append(cs, Candidate{Transaction: t, Sources: []ledger.Coordinates{at}})"
+      }
+    ]
+  },
+  {
+    "id": "M12",
+    "description": "Compare the memory model without its complete output boundary",
+    "package": "./test/scenarios",
+    "test": "TestSC25_EqualValuesStillNeedOutputBoundary",
+    "assertion": "[amends:complete-boundary]",
+    "integration": false,
+    "equivalent": false,
+    "edits": [
+      {
+        "path": "sim/model.go",
+        "before": " || m.View.Next[p] != r.OutputEnd[p]",
+        "after": ""
+      }
+    ]
+  },
+  {
+    "id": "E01",
+    "description": "Reverse equal-time TxnID traversal; daily-close business projection is equivalent",
+    "package": "./test/scenarios",
+    "test": "TestHandDerivedScenarios",
+    "assertion": "",
+    "integration": false,
+    "equivalent": true,
+    "edits": [
+      {
+        "path": "internal/fold/fold.go",
+        "comparison": {
+          "function": "refold",
+          "left_field": "TxnID",
+          "right_field": "TxnID",
+          "before": "<",
+          "after": ">"
+        }
+      }
+    ]
+  }
+]

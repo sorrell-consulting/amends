@@ -1,0 +1,11 @@
+{
+  "trace_version": 1,
+  "implementation": "worker-schedule-v1",
+  "first_seed": 1,
+  "last_seed": 8,
+  "history_classes": ["valid", "conflict-and-rejection"],
+  "scheduled_attempts": 64,
+  "runs": 16,
+  "completion": "retire old lifetimes, assign/seek a fresh worker, then drain the memory delivery model",
+  "scope": "production-worker-lifecycle; memory I/O and logical time"
+}

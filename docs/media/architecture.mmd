@@ -1,0 +1,18 @@
+flowchart LR
+    accTitle: Implemented amends reference architecture
+    accDescr: One PostgreSQL worker transaction commits a decision. The relay publishes asynchronously with at-least-once delivery. Independent verification compares retained source history with the view at a complete boundary.
+    G["Generator<br/>Tiny staged fixture<br/>Optional seeded histories"] --> I["Source topic<br/>Retained raw history<br/>Keyed by stock key"]
+    I --> W["Workers x2<br/>Revision authority<br/>Rewind, refold, diff"]
+    subgraph TX["Atomic worker decision"]
+        W --> P["Postgres<br/>State, versions, quarantine<br/>Outbox, position, epoch"]
+    end
+    P --> R["Relay<br/>Publish stored envelope<br/>Acknowledge, then mark sent"]
+    R --> O["Output topic<br/>Balances, crossings, withdrawals<br/>Key status; at-least-once transport"]
+    O --> V["View<br/>Durable highest version per ID<br/>Retained withdrawals and own progress"]
+    I -. "Complete source prefix H" .-> C["amendsctl<br/>Independent batch oracle<br/>Bounded verify, inspect, replay, rebuild"]
+    V -. "Current state at output boundary O" .-> C
+    P -. "Epoch / progress / outbox completion" .-> C
+    M["Observability: source and view lag; rewind cost; outbox age; conflicts; complete verification status"]
+    classDef default fill:#ffffff,stroke:#d8ddd9,color:#17232b
+    style TX fill:#eaf0eb,stroke:#245c50,color:#245c50
+    linkStyle default stroke:#50616b

@@ -1,0 +1,90 @@
+site_name: amends
+site_description: A synthetic inventory ledger showing how historical corrections change published results and how to check recovery.
+site_url: https://amends.sorrellconsulting.com/
+repo_url: https://github.com/sorrell-consulting/amends
+repo_name: sorrell-consulting/amends
+edit_uri: edit/main/docs/
+copyright: >-
+  Developed by <a href="https://sorrellconsulting.com/">Sorrell Consulting</a>. Architecture, distributed systems, and complex system modernization.<br>
+  Copyright 2026 Sorrell Consulting, LLC · Apache-2.0
+
+theme:
+  name: material
+  custom_dir: overrides
+  font: false
+  logo: assets/brand/logo/logo-horizontal.svg
+  favicon: assets/brand/favicon/favicon.svg
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.top
+    - navigation.tracking
+    - content.code.copy
+
+plugins:
+  - search
+
+markdown_extensions:
+  - tables
+  - attr_list
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - toc:
+      permalink: true
+
+validation:
+  nav:
+    omitted_files: warn
+  links:
+    not_found: warn
+    unrecognized_links: warn
+    anchors: warn
+
+extra_javascript:
+  - assets/javascripts/inventory.js
+extra_css:
+  - assets/stylesheets/brand.css
+  - assets/stylesheets/inventory.css
+
+nav:
+  - Overview:
+      - Home: index.md
+      - Evaluate amends: evaluation.md
+  - Understand:
+      - Architecture and design: design.md
+      - Technical guide: technical-guide.md
+      - Semantic contract: semantics.md
+  - Operate:
+      - Runbook: runbook.md
+      - Verification and inspection: verification.md
+      - Replay and rebuild: replay-rebuild.md
+  - Evidence:
+      - Testing strategy: testing.md
+      - Advanced drills: showcase.md
+      - Limitations: assessment.md
+  - Implementation references:
+      - PostgreSQL storage: postgres-store.md
+      - Source worker: source-worker.md
+      - Output delivery: output-delivery.md
+      - Delivery simulation: delivery-simulation.md
+      - Worker simulation: worker-simulation.md
+      - Mutation testing: mutation-testing.md
+      - External references: references.md
+      - Media and licenses: media/README.md

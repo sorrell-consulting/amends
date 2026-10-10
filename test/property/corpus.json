@@ -1,0 +1,11 @@
+{
+  "generator_version": 1,
+  "first_seed": 1,
+  "last_seed": 64,
+  "history_classes": ["valid", "conflict-and-rejection"],
+  "scheduled_attempts": 80,
+  "clock_ticks": 80,
+  "delivery_permutations_per_history": 2,
+  "completion": "explicit fair drain after faults cease",
+  "scope": "memory model; no SQL or broker evidence"
+}

@@ -1,0 +1,7 @@
+{
+  "item": "DEMO-SECOND",
+  "location": "DEPOT-A",
+  "opening_balance": 100,
+  "reorder_threshold": 60,
+  "partition": 1
+}

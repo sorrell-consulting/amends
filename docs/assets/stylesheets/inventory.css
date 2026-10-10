@@ -1,0 +1,24 @@
+.inventory-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 .75rem;
+}
+.md-typeset .inventory-charts figure {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: .75rem;
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: .25rem;
+  text-align: left;
+}
+.md-typeset .inventory-charts h3 { margin: 0 0 .5rem; font-size: .9rem; }
+.inventory-canvas { position: relative; height: 290px; }
+.md-typeset .inventory-charts figcaption { margin-top: .6rem; font-style: normal; }
+@media (max-width: 48rem) {
+  .inventory-charts { grid-template-columns: minmax(0, 1fr); }
+}
+.no-js .inventory-charts { display: none; }

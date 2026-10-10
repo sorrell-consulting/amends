@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>amends · {{.Namespace}} · Inspection snapshot</title>
+<style>
+:root { color-scheme: light dark; --bg:#f4f5f1; --panel:#fff; --ink:#18302c; --muted:#49615c; --line:#cbd7d2; --warn:#713e09; --warn-bg:#fff0d6; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 system-ui,sans-serif; }
+main { max-width:1280px; margin:auto; padding:36px 24px 64px; }
+header { border-bottom:2px solid var(--ink); padding-bottom:24px; margin-bottom:24px; }
+h1 { font-size:clamp(2rem,5vw,3.2rem); line-height:1.15; letter-spacing:-.035em; margin:12px 0; }
+h2 { font-size:1.25rem; margin:0 0 14px; }
+h3 { font-size:1rem; margin:20px 0 8px; overflow-wrap:anywhere; }
+p { margin:8px 0; }
+.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:.75rem; font-weight:700; }
+.subtle { color:var(--muted); font-size:.9rem; }
+.notice { background:var(--warn-bg); color:var(--warn); border-left:4px solid var(--warn); padding:16px 20px; margin:20px 0; }
+.panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:24px; margin:20px 0; min-width:0; }
+.columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.columns .panel { margin:0; }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; text-align:left; font-variant-numeric:tabular-nums; }
+caption { text-align:left; font-weight:600; margin:8px 0; }
+th,td { border-bottom:1px solid var(--line); padding:10px 12px; vertical-align:top; }
+th { font-size:.8rem; font-weight:600; color:var(--muted); }
+.scroll table { min-width:820px; }
+code,pre { font: .85rem/1.55 ui-monospace,monospace; overflow-wrap:anywhere; }
+pre { white-space:pre-wrap; background:var(--bg); border-radius:6px; padding:14px; }
+summary { cursor:pointer; font-weight:600; overflow-wrap:anywhere; }
+details { padding:14px 0; border-bottom:1px solid var(--line); }
+dt { font-size:.8rem; color:var(--muted); }
+dd { margin:0 0 10px; overflow-wrap:anywhere; }
+.badge { display:inline-block; border:1px solid var(--line); border-radius:4px; padding:2px 7px; font-size:.8rem; }
+.blocked { color:var(--warn); background:var(--warn-bg); }
+@media(max-width:720px) { main { padding:24px 14px; } .columns { grid-template-columns:1fr; } .panel { padding:18px; } }
+@media(prefers-color-scheme:dark) { :root { --bg:#111b19; --panel:#192622; --ink:#edf5f1; --muted:#adc3ba; --line:#43584e; --warn:#ffd69b; --warn-bg:#3e2d17; } }
+</style>
+</head>
+<body><main>
+<header><div class="eyebrow">amends / local operations</div><h1>Inspection snapshot</h1><p><code>{{.Namespace}}</code></p><p class="subtle">Static, read-only observations. No automatic refresh or external resources.</p></header>
+<aside class="notice" aria-label="Verification warning"><strong>NOT VERIFIED</strong><p>This dashboard is not a verification result. Zero lag, no diagnostics, and READY status do not establish agreement. Run bounded verification at a stopped-input, drained-output boundary.</p><p>Worker state, view state, and broker ends are separately timed reads. BLOCKED values remain uncertified, and a saved page becomes stale.</p></aside>
+{{if .ObservationalErrors}}<section class="notice"><h2>Observation unavailable</h2>{{range .ObservationalErrors}}<p>{{.}}</p>{{end}}<p>Unknown boundaries are not zero lag. Restore the missing observation before assessing progress.</p></section>{{end}}
+<section class="panel"><h2>Identity &amp; observation times</h2><div class="columns"><dl><dt>Source topic / incarnation</dt><dd><code>{{.SourceTopic}} / {{.SourceIncarnation}}</code></dd><dt>Output topic / incarnation</dt><dd><code>{{if .OutputTopic}}{{.OutputTopic}} / {{.OutputIncarnation}}{{else}}not configured{{end}}</code></dd><dt>Configuration digest</dt><dd><code>{{.ConfigDigest}}</code></dd></dl><dl><dt>SQL progress observed</dt><dd>{{.ObservedAt}}</dd><dt>Worker snapshot read completed</dt><dd>{{.WorkerReadAt}}</dd><dt>View snapshot read completed</dt><dd>{{.ViewReadAt}}</dd><dt>Scope</dt><dd>{{.Scope}}</dd></dl></div></section>
+<section class="panel"><h2>Partition progress</h2><p class="subtle">Offset distances are positions, not record counts. Broker ends are later observations, not a verified H/O cut.</p><div class="scroll"><table><thead><tr><th>Partition / epoch</th><th>Source next / end</th><th>Input distance</th><th>Pending outbox</th><th>Oldest pending</th><th>View next / output end</th><th>View distance</th><th>Quarantine</th></tr></thead><tbody>{{range .Partitions}}<tr><td>{{.Partition}} / {{.Epoch}}</td><td>{{.SourceNext}} / {{offset .SourceEnd}}</td><td>{{offset .InputLag}}</td><td>{{.Pending}}</td><td>{{age .}}</td><td>{{.ViewNext}} / {{offset .OutputEnd}}</td><td>{{offset .ViewLag}}</td><td>{{.Quarantined}}</td></tr>{{if .ProtocolError}}<tr><td colspan="8" class="blocked"><strong>View protocol error in partition {{.Partition}}:</strong> {{.ProtocolError}}<br>Preserve the offending envelope and frontier; do not skip or choose a payload manually.</td></tr>{{end}}{{else}}<tr><td colspan="8">No partition observations.</td></tr>{{end}}</tbody></table></div><p class="subtle">Pending publication: inspect the relay and retry unchanged committed envelopes. View lag: inspect the materializer separately. Never manually advance a frontier.</p></section>
+<section class="panel"><h2>Latest processing work</h2><p class="subtle">One committed decision per partition, read with SQL progress. Not cumulative totals or a history. Missing measurements are unknown, not zero cost.</p>
+{{range .Partitions}}<details open><summary>Partition {{.Partition}}</summary>{{with .LastProcessing}}
+<p>Source offset {{.Source.Offset}} · decision epoch {{.Epoch}} · sampled before commit {{.SampledAt}}</p>
+<div class="scroll"><table><thead><tr><th>Refold</th><th>From UTC day</th><th>Rewind days</th><th>Refolded records</th><th>Changed business outputs</th><th>Status outputs</th><th>Lock acquisition</th><th>Elapsed before commit</th></tr></thead><tbody><tr><td>{{if .Work.FullRefold}}full key{{else if .Work.Refold}}suffix{{else}}none{{end}}</td><td>{{if .Work.FromDay}}{{.Work.FromDay}}{{else}}none{{end}}</td><td>{{.Work.RewindDays}}</td><td>{{.Work.RefoldedRecords}}</td><td>{{.BusinessOutputs}}</td><td>{{.StatusOutputs}}</td><td>{{milliseconds .LockAcquireNS}}</td><td>{{milliseconds .ElapsedBeforeCommitNS}}</td></tr></tbody></table></div>
+<p>Canonical duplicate: {{.Work.Duplicate}} · lower revision: {{.Work.Stale}}{{if .QuarantineReason}} · quarantined: {{.QuarantineReason}}{{end}}</p>
+{{else}}<p>Not measured: no instrumented decision retained for this partition.</p>{{end}}</details>{{else}}<p>No partition observations.</p>{{end}}
+<p class="subtle">Rewind days count UTC calendar days back from the previous last balance; suffix records exclude earlier active transactions, although authority scans and state copies still visit the key. Withdrawals count as changed outputs. Lock acquisition includes the partition lock query, configuration check, network, and scheduling, not just server lock wait. Elapsed time starts before transaction setup and ends before the progress/measurement write and COMMIT; full storage-call timings and unknown outcomes are in worker logs. Deep corrections hold the partition lock and delay other keys and ownership transfer. These observations are not latency guarantees or verification.</p></section>
+<section class="panel"><h2>Committed aggregates &amp; recent history</h2><p class="subtle">Collection starts with the first instrumented decision after migration 004. Earlier history is unknown. Counts describe committed decisions, not source offset distances or failed attempts. Duplicate and stale flags can overlap.</p>
+{{range .Partitions}}<details open><summary>Partition {{.Partition}}</summary>{{with .Statistics}}
+<p>Collection began at source offset {{.FirstSource.Offset}} · sampled before commit {{.StartedAt}}</p>
+{{if .CountersSaturated}}<p class="notice">Counters saturated: aggregate values are lower bounds.</p>{{end}}
+<div class="scroll"><table><thead><tr><th>Decisions</th><th>Duplicates</th><th>Stale</th><th>Quarantined</th><th>Refolds</th><th>Refolded records</th><th>Business outputs</th><th>Status outputs</th><th>Maximum rewind days</th><th>Total lock acquisition</th><th>Total elapsed before commit</th></tr></thead><tbody><tr><td>{{.Decisions}}</td><td>{{.Duplicates}}</td><td>{{.Stale}}</td><td>{{.Quarantined}}</td><td>{{.Refolds}}</td><td>{{.RefoldedRecords}}</td><td>{{.BusinessOutputs}}</td><td>{{.StatusOutputs}}</td><td>{{.MaxRewindDays}}</td><td>{{milliseconds .LockAcquireNS}}</td><td>{{milliseconds .ElapsedBeforeCommitNS}}</td></tr></tbody></table></div>
+<p>Latest {{len .Recent}} committed decisions, retaining at most 32; oldest first. These client timing sums exclude the final progress write and COMMIT and are not server lock-wait measurements.</p>
+<div class="scroll"><table><thead><tr><th>Source offset / epoch</th><th>Sampled before commit</th><th>Duplicate / stale / quarantine</th><th>Refold / from UTC day</th><th>Rewind days / records</th><th>Business / status outputs</th><th>Lock acquisition / elapsed before commit</th></tr></thead><tbody>{{range .Recent}}<tr><td>{{.Source.Offset}} / {{.Epoch}}</td><td>{{.SampledAt}}</td><td>{{.Work.Duplicate}} / {{.Work.Stale}} / {{if .QuarantineReason}}{{.QuarantineReason}}{{else}}none{{end}}</td><td>{{if .Work.FullRefold}}full key{{else if .Work.Refold}}suffix{{else}}none{{end}} / {{if .Work.FromDay}}{{.Work.FromDay}}{{else}}none{{end}}</td><td>{{.Work.RewindDays}} / {{.Work.RefoldedRecords}}</td><td>{{.BusinessOutputs}} / {{.StatusOutputs}}</td><td>{{milliseconds .LockAcquireNS}} / {{milliseconds .ElapsedBeforeCommitNS}}</td></tr>{{end}}</tbody></table></div>
+{{else}}<p>Not collected: no instrumented aggregate retained for this partition.</p>{{end}}</details>{{else}}<p>No partition observations.</p>{{end}}
+<p class="subtle">Administrative replay preserves these observations. Counts survive ownership changes and restarts; older samples are evicted without reducing aggregates. This bounded history is not a full record archive or a verification result.</p></section>
+<div class="columns"><section class="panel"><h2>Worker projections</h2><p class="subtle">Committed processing state; not proof of downstream application.</p>{{range .WorkerKeys}}{{template "projection" .}}{{else}}<p>No key observations.</p>{{end}}</section><section class="panel"><h2>View projections</h2><p class="subtle">Consumer-visible values at a separate read. READY concerns authority only.</p>{{range .ViewKeys}}{{template "projection" .}}{{else}}<p>No key observations.</p>{{end}}</section></div>
+<section class="panel"><h2>Source conflicts <span class="badge">{{len .ConflictDetails}}</span></h2><p class="subtle">Canonical candidates and source references, not exact raw accepted records. Candidate order is not authority; informational fields represent one observation. Superseded evidence remains reportable.</p>{{range .ConflictDetails}}<details open><summary>{{.Conflict.StockKey.Item}} / {{.Conflict.StockKey.Location}} · {{.Conflict.TxnID}} revision {{.Conflict.Revision}}: {{if .AtHighestRevision}}unresolved highest revision{{else}}superseded conflict{{end}}</summary><p>Highest observed revision: {{.HighestRevision}}. Whole-key status: <strong>{{.KeyStatus}}</strong>.</p><pre>{{json .}}</pre></details>{{else}}<p>No conflict evidence in the worker snapshot. This is not a verification result.</p>{{end}}<p>Resolve current ambiguity with a unique higher complete source revision. Do not select a candidate or erase historical evidence.</p></section>
+<section class="panel"><h2>Quarantine <span class="badge">{{len .Rejections}}</span></h2><p class="subtle">Exact rejected raw key/value bytes are base64 in JSON, including malformed or non-text input.</p>{{range .Rejections}}<details><summary>Partition {{.Record.Partition}}, offset {{.Record.Offset}} · {{.Reason}}</summary><pre>{{json .}}</pre></details>{{else}}<p>No rejected records in the worker snapshot. This does not certify the input history.</p>{{end}}<p>Publish corrected source input; preserve the original rejection. Exact expected diagnostics qualify a verifier result, never suppress unknown exclusions.</p></section>
+<footer class="subtle"><p>Bounded synthetic example. No latency, capacity, production-readiness, or exhaustive-correctness claim. This page does not store a latest verification result.</p></footer>
+</main></body>
+</html>
+{{define "projection"}}<h3>{{.Key.Item}} / {{.Key.Location}} <span class="badge {{if eq .Status "BLOCKED"}}blocked{{end}}">{{.Status}}</span></h3>{{if eq .Status "BLOCKED"}}<p class="notice">Uncertified frozen business values. Resolve source ambiguity before trusting this key.</p>{{end}}{{if .Reasons}}<pre>{{json .Reasons}}</pre>{{end}}<table><caption>Sparse daily closes</caption><thead><tr><th>UTC day</th><th>Close</th></tr></thead><tbody>{{range .Balances}}<tr><td>{{.Day}}</td><td>{{.Close}}</td></tr>{{else}}<tr><td colspan="2">No activity-day rows.</td></tr>{{end}}</tbody></table><table><caption>Historical downward crossings</caption><thead><tr><th>UTC day</th><th>Close</th><th>Threshold</th></tr></thead><tbody>{{range .Alerts}}<tr><td>{{.Day}}</td><td>{{.Close}}</td><td>{{.Threshold}}</td></tr>{{else}}<tr><td colspan="3">No present crossing facts.</td></tr>{{end}}</tbody></table>{{end}}

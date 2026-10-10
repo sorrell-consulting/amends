@@ -1,0 +1,15 @@
+/bin/
+/coverage/
+/artifacts/
+/.local/
+.env
+.env.*
+!.env.example
+*.test
+*.out
+.DS_Store
+Thumbs.db
+.idea/
+/site/
+/.venv-docs/
+__pycache__/

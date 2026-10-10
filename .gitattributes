@@ -1,0 +1,2 @@
+# Preserve upstream bundle bytes, including whitespace inside embedded strings.
+docs/assets/vendor/mermaid-11.12.1.min.js -whitespace

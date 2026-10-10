@@ -1,0 +1,10 @@
+# Applied only when a new broker volume initializes the cluster.
+# Existing clusters require deliberate, inspected configuration changes.
+auto_create_topics_enabled: false
+default_topic_replications: 1
+# Topic creation must explicitly set retention.ms=-1 and retention.bytes=-1.
+# The pinned broker rejected unlimited time retention at cluster scope.
+log_cleanup_policy: delete
+retention_bytes: null
+write_caching_default: "disabled"
+enable_metrics_reporter: false

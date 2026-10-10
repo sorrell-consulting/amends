@@ -1,0 +1,10 @@
+{
+  "stock_key": {"item": "DEMO-PART", "location": "DEPOT-A"},
+  "key_status": "READY",
+  "balances": [
+    {"day": "2026-01-01", "closing_balance": 80},
+    {"day": "2026-01-02", "closing_balance": 60},
+    {"day": "2026-01-03", "closing_balance": 110}
+  ],
+  "active_crossing_alerts": []
+}

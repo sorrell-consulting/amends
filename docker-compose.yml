@@ -1,0 +1,63 @@
+name: amends-local
+
+services:
+  postgres:
+    image: postgres:18.6-bookworm
+    environment:
+      POSTGRES_USER: amends
+      POSTGRES_PASSWORD: amends-local-only
+      POSTGRES_DB: amends
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      # PostgreSQL 18 images keep versioned PGDATA below this directory.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - PGPASSWORD="$${POSTGRES_PASSWORD}" psql -h 127.0.0.1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}" -X -v ON_ERROR_STOP=1 -Atqc 'SELECT 1'
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    mem_limit: 512m
+    stop_grace_period: 30s
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v26.2.3
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp=1
+      - --memory=2G
+      - --reserve-memory=0M
+      - --check=false
+      # Keep fsync enabled; dev-container mode would bypass it.
+      - --unsafe-bypass-fsync=false
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://127.0.0.1:19092
+      - --rpc-addr=0.0.0.0:33145
+      - --advertise-rpc-addr=redpanda:33145
+    ports:
+      - "127.0.0.1:19092:19092"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+      - type: bind
+        source: ./deploy/redpanda/bootstrap.yaml
+        target: /etc/redpanda/.bootstrap.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health", "-X", "admin.hosts=127.0.0.1:9644"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    mem_limit: 3g
+    stop_grace_period: 30s
+
+volumes:
+  postgres-data:
+  redpanda-data:

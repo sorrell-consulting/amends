@@ -1,0 +1,184 @@
+name: Go checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GOWORK: 'off'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
+      - name: Check, build, and collect core and worker/delivery simulation evidence
+        run: make evidence
+      - name: Validate local dependency configuration
+        run: make deps-config
+      - name: Preserve evidence and minimized failure traces
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: core-and-simulation-evidence
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+  pipeline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GOWORK: 'off'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
+      - name: Start pinned PostgreSQL and Redpanda dependencies
+        run: make up
+      - name: Exercise source assignment, recovery, and retained boundaries
+        run: make evidence-worker
+      - name: Exercise relay, materialization, and bounded verification
+        run: make evidence-delivery
+      - name: Exercise controlled replay and isolated rebuild
+        run: make evidence-admin
+      - name: Run retained operator drills
+        run: |
+          make drill DRILL=replay-intact
+          make drill DRILL=full-rebuild
+          make drill DRILL=poison-event
+          make drill DRILL=source-conflict
+          make drill DRILL=relay-stall
+          make drill DRILL=disappearing-day
+          make drill DRILL=materializer-crash
+          make drill DRILL=duplicate-flood
+          make drill DRILL=stale-amendment-storm
+          make drill DRILL=history-missing
+          make drill DRILL=zombie-worker
+          make drill DRILL=ambiguous-commit
+          make drill DRILL=rebalance-under-load
+      - name: Save dependency diagnostics
+        if: always()
+        run: |
+          mkdir -p artifacts/worker
+          docker compose --project-name amends-local --file docker-compose.yml logs --no-color --tail 200 > artifacts/worker/dependencies.log 2>&1
+      - name: Preserve source worker and output delivery evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: worker-evidence
+          path: |
+            artifacts/worker/
+            artifacts/delivery/
+            artifacts/operations/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop dependencies without deleting volumes
+        if: always()
+        run: make down
+
+  showcase:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GOWORK: 'off'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
+      - name: Start pinned PostgreSQL and Redpanda dependencies
+        run: make up
+      - name: Exercise owned crash, diagnostic/delivery/input/history/ownership/commit/rebalance drills, and cancellation cleanup
+        run: make evidence-showcase
+      - name: Save dependency diagnostics
+        if: always()
+        run: |
+          mkdir -p artifacts/showcase
+          docker compose --project-name amends-local --file docker-compose.yml logs --no-color --tail 200 > artifacts/showcase/dependencies.log 2>&1
+      - name: Preserve showcase evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: showcase-evidence
+          path: artifacts/showcase/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop dependencies without deleting volumes
+        if: always()
+        run: make down
+
+  # Require both pipeline and showcase suites for the worker check.
+  worker:
+    needs: [pipeline, showcase]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require every worker and showcase check to succeed
+        env:
+          PIPELINE_RESULT: ${{ needs.pipeline.result }}
+          SHOWCASE_RESULT: ${{ needs.showcase.result }}
+        run: |
+          test "$PIPELINE_RESULT" = success
+          test "$SHOWCASE_RESULT" = success
+
+  postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18.6-bookworm
+        env:
+          POSTGRES_USER: amends
+          POSTGRES_PASSWORD: amends-local-only
+          POSTGRES_DB: amends
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U amends -d amends"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      GOWORK: 'off'
+      AMENDS_TEST_DATABASE_URL: postgres://amends:amends-local-only@127.0.0.1:5432/amends?sslmode=disable
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
+      - name: Exercise PostgreSQL transactions and lost commit replies
+        run: make evidence-postgres
+      - name: Preserve database evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: postgres-evidence
+          path: artifacts/postgres/
+          if-no-files-found: error
+          retention-days: 14
