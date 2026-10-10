@@ -15,6 +15,7 @@ import (
 // ValidTime and SourceTime are normalized to UTC. A nil error does not imply
 // that the transaction's kind, quantity, revision, or routing is valid.
 func Decode(raw []byte) (Transaction, error) {
+	//TODO: Does this silently replace invalid bytes?
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
 	if err := object(d); err != nil {
@@ -61,7 +62,7 @@ func Decode(raw []byte) (Transaction, error) {
 		return Transaction{}, err
 	}
 	t.ValidTime = t.ValidTime.UTC()
-	t.SourceTime = t.SourceTime.UTC()
+	t.SourceTime = t.SourceTime.UTC() //TODO: Will extreme source_time block indefinitely?
 	return t, nil
 }
 

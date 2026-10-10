@@ -112,6 +112,7 @@ func (t *ProcessingTx) Apply(r ledger.Record) (err error) {
 			return err
 		}
 		t.measurement.Work = work
+		//TODO: Do we actually need to load every output in this key's partition? I don't think so.
 		outputs, err := loadEnvelopes(t.ctx, t.tx, s.ns, p, "amends_output_state")
 		if err != nil {
 			return err

@@ -80,6 +80,8 @@ func (s *Store) Acknowledge(ctx context.Context, partition int, sequence, output
 		return fmt.Errorf("outbox acknowledgement out of order")
 	}
 	var last int64
+	//TODO: Below means every acknowledgement will scan retained outbox history. maybe index the receipt lookup o
+	// retain the latest receipt separately?
 	if err = tx.QueryRow(ctx, "SELECT COALESCE(MAX(output_offset),-1) FROM amends_outbox WHERE namespace_id=$1 AND partition=$2", s.ns, partition).Scan(&last); err != nil {
 		return err
 	}
