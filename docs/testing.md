@@ -222,12 +222,13 @@ GOWORK=off go test -mod=readonly -race -count=1 \
 
 ### Reproduce repair locality
 
-The [optional 2,000-day example](design.md#how-much-history-needs-repair) compares early and late corrections using production fold/diff functions and the memory materializer. Baseline, correction, and last-day cancellation are checked against independently stated business expectations and the full-history oracle. The `locality` build tag keeps this larger demonstration outside ordinary tests:
+The [optional 2,000-day example](design.md#how-much-history-needs-repair) compares early and late corrections using production fold/diff functions and the memory materializer. Baseline, correction, and last-day cancellation are checked against independently stated business expectations and the full-history oracle. Run it with the race detector:
 
 ```sh
-GOTOOLCHAIN=go1.27.2 GOWORK=off go test -mod=readonly -race -tags=locality \
-  -run '^TestRepairLocality$' -count=1 -v ./test/scenarios
+make test-locality
 ```
+
+The `locality` build tag keeps execution outside ordinary tests. `make vet` includes the tagged code, so normal checks catch compilation errors in the example.
 
 It reports suffix records and emitted business changes. SQL/broker behavior and end-to-end speed are covered by different evidence; a reduced suffix count alone establishes neither.
 

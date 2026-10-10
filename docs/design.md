@@ -150,8 +150,7 @@ These are calculated ranges, not measured performance. Full-history reconstructi
 The opt-in [repair-locality example](https://github.com/sorrell-consulting/amends/blob/main/test/scenarios/repair_locality_test.go) executes the existing Go fold, output diff, memory view, and independent oracle. Run it from the repository root:
 
 ```sh
-GOTOOLCHAIN=go1.27.2 GOWORK=off go test -mod=readonly -tags=locality \
-  -run '^TestRepairLocality$' -count=1 -v ./test/scenarios
+make test-locality
 ```
 
 Each case has one transaction per day, opening inventory of 100, and a threshold of 60. Most movements have quantity zero and still count as activity. An issue of 50 on the selected day, an issue of 20 the next day, and a receipt of 50 the day after produce closes of 50, 30, and 80. Amending the first issue to 30 changes those closes to 70, 50, and 100, with the final close carrying through the remaining activity days. Each case starts from its own baseline, folded record by record and then materialized once.

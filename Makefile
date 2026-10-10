@@ -18,6 +18,7 @@ COMPOSE := docker compose --project-name amends-local --file docker-compose.yml
 .DEFAULT_GOAL := check
 .PHONY: test-admin evidence-admin
 .PHONY: docs-build docs-check docs-serve
+.PHONY: test-locality
 .PHONY: help fmt fmt-check vet test test-postgres evidence-postgres test-worker evidence-worker test-delivery evidence-delivery test-verify evidence-verify test-showcase evidence-showcase build check core-demo demo drill sim sim-delivery test-sim-delivery sim-worker test-sim-worker test-mutations evidence-mutations evidence deps-config up down status ready
 
 help:
@@ -40,7 +41,7 @@ help:
 	  '  make check      Check formatting, vet, test with the race detector, and build' \
 	  '  make fmt        Format Go packages' \
 	  '  make fmt-check  Check formatting without changing source files' \
-	  '  make vet        Run go vet' \
+	  '  make vet        Run go vet, including the optional locality example' \
 	  '  make test       Run race-enabled tests without cached results (no services)' \
 	  '  make build      Build bin/amendsctl and bin/amends' \
 	  '' \
@@ -50,6 +51,7 @@ help:
 	  '  make docs-check Strict build, links, and fixture/chart consistency' \
 	  '' \
 	  'Integration tests and advanced simulations:' \
+	  '  make test-locality Run the 2,000-day repair example with the race detector' \
 	  '  make test-postgres Run real database tests against the configured local endpoint' \
 	  '  make test-worker Run source worker tests against PostgreSQL and Redpanda' \
 	  '  make test-delivery Run real relay, materializer, and full pipeline tests' \
@@ -115,10 +117,13 @@ fmt-check:
 	  fi
 
 vet:
-	$(GO) vet -mod=readonly ./...
+	$(GO) vet -mod=readonly -tags=locality ./...
 
 test:
 	$(GO) test -mod=readonly -race -count=1 ./...
+
+test-locality:
+	$(GO) test -mod=readonly -race -tags=locality -run '^TestRepairLocality$$' -count=1 -v ./test/scenarios
 
 test-postgres:
 	$(GO) test -mod=readonly -race -count=1 -tags=integration ./internal/store/postgres

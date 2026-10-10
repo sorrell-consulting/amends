@@ -100,7 +100,7 @@ func TestRepairLocality(test *testing.T) {
 			}
 			state = corrected
 			messages := publish(state.Projection, history[days])
-			counts := map[string]int{}
+			counts := map[ledger.OutputType]int{}
 			for _, message := range messages {
 				counts[message.Type]++
 			}
