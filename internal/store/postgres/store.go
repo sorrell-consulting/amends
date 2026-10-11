@@ -103,7 +103,12 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	defer cancel()
 	defer rollback(tx)
-	if _, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(70890124001)"); err != nil {
+
+	// Keep stable across releases so all Amends versions serialize migrations
+	// using the same advisory lock.
+	const migrationLockID int64 = 70890124001
+
+	if _, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", migrationLockID); err != nil {
 		return err
 	}
 	if _, err = tx.Exec(ctx, "CREATE TABLE IF NOT EXISTS amends_schema_migrations (version INTEGER PRIMARY KEY, checksum TEXT NOT NULL, installed_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp())"); err != nil {
