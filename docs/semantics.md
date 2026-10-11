@@ -54,13 +54,13 @@ NEW and AMEND are complete replacement records with the same upsert behavior. A 
 
 CANCEL is a complete assertion that the identity is inactive at its revision. Its valid time is retained as source metadata but contributes no activity day. Cancelling a previously active transaction removes the old active contribution, regardless of the cancellation record's own valid time. Cancel-before-new creates an authority tombstone without creating a business output. A higher complete NEW or AMEND can reactivate the identity; lower revisions cannot.
 
-The broker key must match the envelope stock key. The producer must use the fixed partition mapping in the namespace manifest. A mismatched or misrouted record is rejected, not treated as a cross-key update. The namespace configuration and retained source records are inputs to verification, not trusted results supplied by the worker.
+The broker key must match the envelope stock key. The producer must use the fixed partition mapping in the namespace manifest. A mismatched or misrouted record is rejected, not treated as a cross-key update. Verification derives its expected result from namespace configuration and retained source records independently of worker results.
 
 ### Canonical equality
 
 Canonical business payload comprises identity, revision, kind, normalized valid time, and quantity. Equivalent timestamp offsets normalize to the same instant. SourceTime, ingestion time, retry metadata, and broker coordinates are excluded from authority equality. Different informative timestamps therefore do not create a business conflict.
 
-Exact canonical duplicates do not change derived state or output versions. Use canonical bytes or field equality to confirm equality; a digest is an index or diagnostic aid, not the sole unquestioned correctness test. Distinct business payloads at the same revision are conflicting source assertions, even when their daily arithmetic happens to coincide.
+Exact canonical duplicates do not change derived state or output versions. Use canonical bytes or field equality to confirm equality. A digest can aid indexing and diagnostics, with equality established by comparing the underlying values. Distinct business payloads at the same revision are conflicting source assertions, even when their daily arithmetic happens to coincide.
 
 ### Arithmetic boundary
 
@@ -78,9 +78,9 @@ Continue ingesting and recording revisions for the blocked key, but freeze its b
 
 A unique higher revision resolves a lower conflict for that identity. Once all current highest-revision conflicts on a key have been resolved, recompute that key completely from its authoritative transactions and opening configuration. Diff against its last computed output state; enqueue any business repairs before `KeyStatusStated(READY)`. Preserve historical conflict evidence. A later distinct payload at the new highest revision blocks the key again.
 
-A conflict discovered only at an already-superseded revision is an audit diagnostic, not an ambiguity in the current authoritative value. It is still reported. Verification of repaired histories is qualified; it must not erase the history of exclusions or source-contract violations.
+A conflict discovered only at an already-superseded revision remains an audit diagnostic while the current authoritative value stays unambiguous. It is still reported. Verification of repaired histories is qualified; it must not erase the history of exclusions or source-contract violations.
 
-Malformed input is durably quarantined with raw record or retained raw-record reference, reason code, namespace, topic incarnation, partition, and offset. Its processing decision and next input position commit atomically. A standalone quarantine topic is not required in v1. Any later quarantine notification must use a transactional outbox, not an uncoordinated second write.
+Malformed input is durably quarantined with raw record or retained raw-record reference, reason code, namespace, topic incarnation, partition, and offset. Its processing decision and next input position commit atomically. A standalone quarantine topic is not required in v1. Any later quarantine notification must use a transactional outbox so its publication intent commits with the rejection decision.
 
 There is no generic “release this conflicting payload as authoritative” command. A correction must arrive as a valid source assertion at a higher revision. Malformed records may be corrected and re-published as new source records under the same authority rules; the original rejection is retained. A rejected malformed record does not establish a canonical revision payload.
 
@@ -102,7 +102,7 @@ Publish one balance fact for each d in D and one alert fact for each d where cro
 
 If a day has no active transactions, it has no balance row. Its balance is implicitly the most recent earlier close, or the opening balance. It cannot create a daily crossing. If the last active transaction moves away or is cancelled, remove that day's balance fact. Recompute later days and any crossing relationships that depend on the removed day.
 
-The active alert set may contain more than one historical crossing on different days, even if the latest inventory balance has recovered. This is a history of currently valid crossing facts, not a current-stock status API.
+The active alert set may contain more than one historical crossing on different days, even if the latest inventory balance has recovered. The active alert set describes currently valid historical crossings; use the latest balance to determine current stock.
 
 ## S6. Incremental repair
 
@@ -114,7 +114,7 @@ A forward-only fast path is permitted only when it produces exactly the same bus
 
 For reproducible traversal, sort active transactions by `(ValidTime, TxnID)`. Under these additive daily semantics, removing the TxnID tiebreak can be an equivalent mutation. Stable diagnostics are useful, but do not describe that order as the source of daily-balance correctness.
 
-Diff newly computed business state against the previous committed derived-output state. “Previous” here means state for which publication intent was committed, not necessarily already delivered to the view. No semantic difference means no business output and no version increment. A change only to the informational cause does not by itself restate an unchanged business fact.
+Diff newly computed business state against the previous committed derived-output state. “Previous” here means state for which publication intent was committed, including outputs still awaiting delivery to the view. No semantic difference means no business output and no version increment. A change only to the informational cause does not by itself restate an unchanged business fact.
 
 ## S7. Output protocol and consumer behavior
 
@@ -144,13 +144,13 @@ Apply an output only when its version is greater than the stored version for the
 
 The comparison, business upsert or withdrawal, retained version, and output-consumer position must commit in one durable transaction. An ignored duplicate still advances the output-consumer position atomically. Withdrawals hide a business row but retain the version and deletion marker; physical deletion of that guard is forbidden in v1.
 
-Version 5 arriving before version 4 may cause version 4 never to be applied. That is correct current-state materialization, not “each version applied once.” At-least-once publication and version-aware consumption do not imply atomic repair of multiple rows. A reader can see a partly propagated correction until the verification boundary is reached.
+Version 5 arriving before version 4 may cause version 4 never to be applied. Correct current-state materialization retains the highest version even when lower versions are skipped. At-least-once publication and version-aware consumption do not imply atomic repair of multiple rows. A reader can see a partly propagated correction until the verification boundary is reached.
 
 ## S8. Atomic input progress and fencing
 
 Processing state, revision/conflict evidence, balances, derived-output state, version increments, outbox rows, durable quarantine, and input progress for a decision belong to one Postgres transaction. Duplicate and stale inputs may change only evidence, counters where durable, and progress.
 
-`next_offset` is an exclusive source frontier: the next source position to read. Broker offsets are positions, not necessarily a contiguous count of user records. Advance through records in partition order using broker-provided coordinates and the adapter's validated seek behavior; do not confuse a fetch cursor or auto-committed group offset with durable processing progress. A new owner seeks to the database's authoritative position.
+`next_offset` is an exclusive source frontier: the next source position to read. Broker offsets identify positions that may have gaps between user records. Advance through records in partition order using broker-provided coordinates and the adapter's validated seek behavior; do not confuse a fetch cursor or auto-committed group offset with durable processing progress. A new owner seeks to the database's authoritative position.
 
 The partition-state row contains an ownership epoch. Both epoch installation and state-changing processing transactions serialize on that row. The implementation locks it before reading mutable processing state, verifies the expected epoch and frontier, and retains the lock until commit or rollback. A failed epoch/frontier check aborts the whole transaction.
 
@@ -170,7 +170,7 @@ Transient failures use bounded-attempt or bounded-time retry behavior with expli
 
 ## S10. Verification and quiescence
 
-The first implementation uses a stopped-input boundary, not online snapshot reconstruction. `amendsctl verify --quiesce` is the orchestration interface for the local stack:
+The first implementation requires input to stop while it establishes a fixed verification boundary. `amendsctl verify --quiesce` is the orchestration interface for the local stack:
 
 1. Stop and await the owned synthetic producer. Confirm no other writer is permitted for the namespace. Capture source topic incarnation, configuration digest, ledger origin, retained starts, and exclusive end-offset vector H. Recheck that the source does not advance during the run.
 2. Wait until durable worker frontiers have reached H, without skipping unhandled records. Require supported source retention and a complete history beginning at the declared ledger origin. Missing or compacted required history is not repaired by assuming zero opening movements.
@@ -192,7 +192,7 @@ The source topic must preserve the complete raw history required by the example.
 | INCOMPLETE | Boundary not reached, source changed, or required history unavailable | Nonzero |
 | ERROR | Infrastructure, protocol, arithmetic, schema, or verifier failure prevents a reliable result | Nonzero |
 
-A diagnostics manifest is a named fixture listing exact record references/canonical fingerprints and reason codes, not a blanket “ignore quarantine” option. Even when it allows a zero exit for an expected poison-input drill, the printed status remains PASS_WITH_EXCLUSIONS. Negative tests may succeed by asserting an expected BLOCKED or INCOMPLETE result; this does not convert the underlying verification into PASS.
+A diagnostics manifest is a named fixture whose record references/canonical fingerprints and reason codes must match the verifier's observed diagnostics exactly. Even when it allows a zero exit for an expected poison-input drill, the printed status remains PASS_WITH_EXCLUSIONS. Negative tests may succeed by asserting an expected BLOCKED or INCOMPLETE result; this does not convert the underlying verification into PASS.
 
 When the boundary is incomplete and unresolved highest-revision conflicts are already known, the overall verification status is INCOMPLETE. Include the known conflicts in the report and retain each affected key's BLOCKED trust status; neither the incomplete report nor the retained business values certify that key. Once the complete boundary is established, report BLOCKED if authority remains unresolved at that boundary.
 
@@ -232,7 +232,7 @@ A higher CANCEL removes an active transaction and persists its authority. If CAN
 
 ### SC05: Reactivation
 
-After cancellation, a higher complete NEW or AMEND makes the identity active again. Existing output IDs that reappear use versions greater than their withdrawal versions, not a restarted counter.
+After cancellation, a higher complete NEW or AMEND makes the identity active again. Existing output IDs that reappear continue their retained version sequence above their withdrawal versions.
 
 ### SC06: Stale amendment arrives last
 
@@ -254,7 +254,7 @@ A unique higher full revision resolves the ambiguity. Recompute the whole blocke
 
 While one key is BLOCKED, its further revisions are retained without business computation; another key continues normally. Resolution of the blocked key incorporates all accepted revisions accumulated during the blocked interval.
 
-### SC11: Daily, not intraday, crossings
+### SC11: Daily-close crossings { #sc11-daily-not-intraday-crossings }
 
 Two same-day movements may take an intraday running balance below and then back above the threshold. When the daily close is not below, there is no crossing alert for that day. Permuting equal-time records does not change the daily business result.
 

@@ -39,9 +39,9 @@ Unknown claim and processing results require different decisions. A successful r
 
 ## Trace and lifetime model
 
-[`sim/ownership`](https://github.com/sorrell-consulting/amends/tree/main/sim/ownership) uses a separate version-1 trace identified by `implementation: "worker-schedule-v1"`. It records the toolchain, seed, configuration digest, complete immutable configuration, raw ordered source records, `steps`, and `drain`. The producing toolchain is provenance, not a requirement that replay install a different compiler automatically.
+[`sim/ownership`](https://github.com/sorrell-consulting/amends/tree/main/sim/ownership) uses a separate version-1 trace identified by `implementation: "worker-schedule-v1"`. It records the toolchain, seed, configuration digest, complete immutable configuration, raw ordered source records, `steps`, and `drain`. The toolchain field records build provenance; replay reads it as metadata.
 
-Each step has `actor`, `worker`, `partition`, and optional `faults`. `worker` identifies one lifetime, not a reusable slot. A new lifetime gets a new ID. The modeled store begins at epoch zero; the core memory simulations claim all partitions at construction.
+Each step has `actor`, `worker`, `partition`, and optional `faults`. `worker` identifies a single lifetime. A new lifetime gets a new ID. The modeled store begins at epoch zero; the core memory simulations claim all partitions at construction.
 
 | Actor | Action |
 | --- | --- |

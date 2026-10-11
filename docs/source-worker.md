@@ -75,7 +75,7 @@ The CLI defaults to text logs; `-log-format json` emits JSON objects for machine
 
 ## Unknown outcomes and retry limits
 
-Store calls receive at most three attempts, with cancellable 100 ms and 200 ms waits and a shared operation deadline. A fence is terminal. Exhaustion stops the worker visibly; a restart is explicit resumption from durable state, not an in-memory reset. Broker requests also use bounded retry/time settings. This does not establish progress during permanent failure or a fixed latency guarantee.
+Store calls receive at most three attempts, with cancellable 100 ms and 200 ms waits and a shared operation deadline. A fence is terminal. Exhaustion stops the worker visibly; an explicit restart resumes from durable state. Broker requests also use bounded retry/time settings. This does not establish progress during permanent failure or a fixed latency guarantee.
 
 After an unknown processing commit, the worker rereads epoch and progress before deciding anything else:
 

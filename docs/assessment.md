@@ -46,7 +46,7 @@ Production authentication, authorization, TLS, key/secrets management, trusted i
 
 The inventory ledger is a teaching domain with immutable opening balances and reorder thresholds. It does not validate actual stock ownership, purchase orders, inventory reservations, transfers, substitutions, backorders, or equipment readiness. Cross-key invariants and integration with actual logistics systems are outside its scope.
 
-Historical crossing facts are revisable decision-support outputs. Retracting one does not recall an email, cancel an order, reverse a payment, or compensate an external action. Such actions need separate business workflows with their own authority, idempotency, and compensation rules.
+Historical crossing facts are revisable decision-support outputs. Retracting one does not recall an email, cancel an order, reverse a payment, or compensate an external action. Such actions need separate business workflows with their own authority, idempotency, and [compensation rules](https://learn.microsoft.com/en-us/azure/architecture/patterns/compensating-transaction).
 
 The example records daily-close crossings. Intraday crossings require different identities and ordering rules. Daily output is sparse: an absent day carries the preceding balance implicitly and does not mean zero inventory.
 

@@ -79,7 +79,7 @@ The shared retry code then waits another 100 logical milliseconds and republishe
 
 Reads accept only `commit` and `abort`. Writes accept all six choices. Fault selectors are unique per operation/call; calls are numbered 1–9 to include nested recovery retries. `delay_ms` is 0–60,000 and advances logical observation time after the chosen effect. No wall-clock sleeping occurs.
 
-An exhausted retry, unresolved recovery read, or modeled crash retires the role across partitions. Later attempts are visibly parked until an explicit resume or fair recovery restart. A fair drain is a stated availability assumption, not an implicit success after a timeout. With `drain: false`, incomplete progress remains INCOMPLETE, including known conflict diagnostics.
+An exhausted retry, unresolved recovery read, or modeled crash retires the role across partitions. Later attempts are visibly parked until an explicit resume or fair recovery restart. A fair drain requires restored availability and actual completion of pending work. With `drain: false`, incomplete progress remains INCOMPLETE, including known conflict diagnostics.
 
 ## Checks and reports
 

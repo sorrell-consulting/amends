@@ -119,7 +119,7 @@ The oracle shares ledger types, configuration helpers, serialization, and wire d
 4. [SQL view application](https://github.com/sorrell-consulting/amends/blob/main/internal/store/postgres/view.go) `ApplyViewInput` commits version/tombstone decisions with output progress. Equal-version conflicting content retains a protocol diagnostic without skipping the offending record.
 5. [Verification](https://github.com/sorrell-consulting/amends/tree/main/internal/verify) independently scans retained broker source to H, obtains a consistent durable view at O after the stopped-writer handoff, and compares the oracle result. It does not read worker answers as oracle input.
 
-The [storage](postgres-store.md), [source](source-worker.md), [delivery](output-delivery.md), and [verification](verification.md) references own the exact SQL, lifecycle, and operational protocols. Measurements include last committed work, cumulative counts and the latest 32 samples; they are inspection data, not a comparison certificate.
+The [storage](postgres-store.md), [source](source-worker.md), [delivery](output-delivery.md), and [verification](verification.md) references own the exact SQL, lifecycle, and operational protocols. Measurements expose last committed work, cumulative counts and the latest 32 samples for inspection; a separate bounded verification establishes agreement.
 
 ## The data model
 
@@ -140,7 +140,7 @@ A stock key is the pair `(item, location)`. A transaction identity is `(stock ke
 | `Origin` | Ledger origin; transactions before this instant are rejected |
 | `Keys` | Configured stock keys, each with opening balance, reorder threshold, and fixed partition |
 
-Opening balance describes stock immediately before the ledger origin. It is not an event and creates no balance row or alert. Thresholds and partition mappings are also configuration, rather than values changed by transaction records.
+Opening balance describes stock immediately before the ledger origin. It is not an event and creates no balance row or alert. Thresholds and partition mappings also remain fixed in namespace configuration throughout transaction processing.
 
 `Config.Validate` rejects unsupported schema, missing namespace/source, invalid partition counts or key mappings, duplicate keys, and an empty key set. `Config.Digest` normalizes the origin to UTC, sorts keys, serializes the configuration, and hashes it with SHA-256. Tokens and traces use the digest to detect incompatible interpretation. It is an identity check, not an authentication mechanism.
 
@@ -241,11 +241,11 @@ The worker's rejection codes are evaluated in this order:
 | `KEY_MISMATCH` | Transport key differs from the envelope stock key |
 | `ROUTING` | Record partition differs from the configured key partition |
 
-An incompatible source incarnation, invalid processing frontier, ownership fence failure, or arithmetic overflow is an operation error, not a reason to quarantine a syntactically valid business assertion. A rejection decision advances progress only when its quarantine evidence is installed in the same model commit.
+An incompatible source incarnation, invalid processing frontier, ownership fence failure, or arithmetic overflow fails the operation and leaves its input frontier unchanged for recovery. A rejection decision advances progress only when its quarantine evidence is installed in the same model commit.
 
 ### Complete replacement authority
 
-NEW and AMEND have the same active upsert interpretation. An amendment is the whole replacement value, not a quantity delta or patch. Revision 4 can arrive before revisions 1–3, and intermediate revisions need never arrive.
+NEW and AMEND have the same active upsert interpretation. An amendment supplies the complete value that replaces the previous assertion. Revision 4 can arrive before revisions 1–3, and intermediate revisions need never arrive.
 
 `fold.CanonicalEqual` compares transaction identity, revision, kind, normalized valid instant, and quantity. It excludes source time and transport coordinates. Different kinds or valid instants at the same revision conflict even when they would happen to produce identical daily arithmetic.
 
@@ -300,7 +300,7 @@ flowchart TD
     Diff --> Repair["Restate three balances;<br/>withdraw Day 1 alert;<br/>publish Day 2 alert"]
 ```
 
-This shows a computation, not the timing of downstream delivery. The following steps select the same boundary when the changed day is later in history.
+This example shows the computation; downstream delivery runs asynchronously on its own schedule. The following steps select the same boundary when the changed day is later in history.
 
 `fold.Apply` clones the previous state before recording new evidence. After resolving authority and trust status, it chooses the repair boundary:
 
@@ -345,7 +345,7 @@ The function constructs desired balances, alerts, and status, then adds withdraw
 
 Versioning starts at 1 per output ID. A higher source revision with unchanged daily business facts does not allocate another business version. Changing the informational cause alone does not cause a restatement.
 
-Business changes are ordered by their encoded output IDs; the status ID is processed last. Thus repairs resulting from conflict resolution are enqueued before READY. This is ordering within the committed outbox, not an atomic downstream update of all affected rows.
+Business changes are ordered by their encoded output IDs; the status ID is processed last. Thus repairs resulting from conflict resolution are enqueued before READY. This ordering is committed in the outbox. Downstream consumers apply individual envelopes and may observe a partial repair until delivery completes.
 
 ### Two equality rules
 
@@ -369,6 +369,8 @@ Successful application, including ignored older messages and exact duplicates, a
 A withdrawal stores an envelope with `Present=false`. `Projection` hides that row, but the version remains in `Rows`. If a version-3 withdrawal is followed by a version-2 statement, version 2 cannot resurrect the row. A legitimate reappearance can publish version 4 on the same ID.
 
 There are two separate retained guards: cancellation authority in the source model and deletion versions in the output model. The first defeats stale input; the second defeats stale delivery. Neither has a garbage-collection protocol in this implementation.
+
+The [Idempotent Receiver](https://www.enterpriseintegrationpatterns.com/patterns/messaging/IdempotentReceiver.html) pattern describes safe duplicate handling. [Kafka compaction](https://docs.confluent.io/kafka/design/log_compaction.html#compaction-enables-deletes) uses null-valued broker records as deletion markers, which can expire; amends' deletion guards remain in the view to reject older versions.
 
 The scheduler applies an output to a cloned view and installs the clone only for a modeled committed outcome. The PostgreSQL adapter separately applies the same version decision under a view-progress row lock and commits values, deletion guards, and progress together. Its lost-reply and reconnect tests are described in the [storage guide](postgres-store.md#durable-view).
 

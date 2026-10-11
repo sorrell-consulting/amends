@@ -4,11 +4,11 @@ Use this guide to operate an existing local synthetic pipeline. For your first r
 
 ## Operating boundary
 
-The reference stack is local, with synthetic data and loopback-only host ports. A **namespace** isolates one run's immutable configuration and state. Normal restarts preserve its source history, revision evidence, and output versions, including retained deletion versions (**tombstones**) that prevent older messages from restoring withdrawn results. They also preserve database **frontiers**: the next source offset for workers and next output offset for the view service. Offsets are positions, not business-record counts. Named volumes provide persistence, not backups or high availability. Never remove volumes as part of routine recovery.
+The reference stack is local, with synthetic data and loopback-only host ports. A **namespace** isolates one run's immutable configuration and state. Normal restarts preserve its source history, revision evidence, and output versions, including retained deletion versions (**tombstones**) that prevent older messages from restoring withdrawn results. They also preserve database **frontiers**: the next source offset for workers and next output offset for the view service. Offsets identify broker positions, which may have gaps between business records. Named volumes provide persistence, not backups or high availability. Never remove volumes as part of routine recovery.
 
 ### Prerequisites and connections
 
-Use a local Linux Docker engine with the Compose plugin. On Windows, start Docker Desktop and enable its integration for the WSL distribution containing this checkout. `docker version` must report both client and server; a Compose version alone does not establish daemon availability. Initial startup downloads the pinned images from their registries. Go is needed for application checks, not these dependency targets.
+Use a local Linux Docker engine with the Compose plugin. On Windows, start Docker Desktop and enable its integration for the WSL distribution containing this checkout. `docker version` must report both client and server; a Compose version alone does not establish daemon availability. Initial startup downloads the pinned images from their registries. These dependency targets run through Docker; application checks also require Go.
 
 Allow at least 4 GiB of available Docker memory and space for the images and retained data. This is a starting allocation, not a measured minimum: Redpanda has a 3 GiB container limit and a 2 GiB heap with one processing core; Postgres has a 512 MiB limit. Disk use grows with retained history. Use a single checkout at a time for this fixed `amends-local` project; change neither its project name nor ports casually when investigating existing data.
 
@@ -31,7 +31,7 @@ make status       # Include stopped containers and health state.
 make down         # Graceful stop; retain containers, network, and volumes.
 ```
 
-The Makefile always names the Compose file, project, and services explicitly. `make up` returns nonzero if startup or health checking fails; it may leave one or both containers running for inspection. `make ready` does not repair or restart anything and returns nonzero when a required probe fails. A running process can still be unhealthy: Postgres must execute an authenticated TCP `SELECT 1`, and Redpanda must report cluster health. Its health probe uses the pinned `rpk --exit-when-healthy` inside a 30-second container-side timeout, allowing periodically collected health reports to settle after test-owned topic deletion; persistent unhealthy/unavailable state still fails. The additional Kafka metadata probe checks its internal listener. These are dependency checks, not inventory or end-to-end verification.
+The Makefile always names the Compose file, project, and services explicitly. `make up` returns nonzero if startup or health checking fails; it may leave one or both containers running for inspection. `make ready` does not repair or restart anything and returns nonzero when a required probe fails. A running process can still be unhealthy: Postgres must execute an authenticated TCP `SELECT 1`, and Redpanda must report cluster health. Its health probe uses the pinned `rpk --exit-when-healthy` inside a 30-second container-side timeout, allowing periodically collected health reports to settle after test-owned topic deletion; persistent unhealthy/unavailable state still fails. The additional Kafka metadata probe checks its internal listener. These checks establish dependency readiness. Use the bounded verifier to check inventory results across the complete pipeline.
 
 For bounded diagnostics:
 
@@ -61,7 +61,7 @@ Expect `cleanup.policy=delete`, both retention values `-1`, and `write.caching=d
 
 We retain the full source history for verification, so retention is unbounded. Monitor disk use. Changing a topic's settings can invalidate the full-history verification precondition.
 
-Bootstrap configuration applies only to a fresh broker volume. Editing that file does not reconfigure an existing cluster. Inspect the current settings before applying a configuration change; do not reset a volume to make a configuration change appear to work. Named volumes are persistence, not backups or high availability. A single broker cannot survive destruction of its only data volume.
+Bootstrap configuration applies only to a fresh broker volume. Editing that file does not reconfigure an existing cluster. Inspect the current settings before applying a configuration change; do not reset a volume to make a configuration change appear to work. Named volumes retain local state. Backups and high availability require separate arrangements. A single broker cannot survive destruction of its only data volume.
 
 No reset target is supplied. Removing either named volume destroys its stored history/state; recreating source history invalidates ordinary replay assumptions. Destructive reset requires separate approval naming the affected resources and data. Routine stop/start must never use volume removal or blanket Docker cleanup.
 
@@ -83,7 +83,7 @@ Set `AMENDS_DATABASE_URL` for your stack and `MANIFEST` to the exact saved pipel
 
 `last_processing` contains the last committed decision per partition: source coordinates and epoch, duplicate/stale classification, rewind depth, suffix records, changed envelopes, and qualified client timings. `processing_statistics` contains cumulative committed counts since collection began and the latest 32 samples. Missing history is unknown, not zero or backfilled. Offset gaps, aborted attempts, stale owners, and administrative replay do not add committed decisions. Duplicate/stale flags can overlap; saturated counters are lower bounds.
 
-For slow processing, compare `lock_acquire_ns` with `elapsed_before_commit_ns` and the worker log's complete `storage_call_elapsed_ns`. Acquisition includes network/query/scheduling time, not just server lock wait. Precommit timing excludes the final write and commit response. Failed or unknown attempts remain log observations; the previous committed sample may remain visible. See [measurement definitions](verification.md#committed-processing-measurements) and [aggregates/history](verification.md#committed-aggregates-and-bounded-history). These samples are not long-term percentiles or a latency guarantee.
+For slow processing, compare `lock_acquire_ns` with `elapsed_before_commit_ns` and the worker log's complete `storage_call_elapsed_ns`. Acquisition includes network, query, and scheduling time along with server lock wait. Precommit timing excludes the final write and commit response. Failed or unknown attempts remain log observations; the previous committed sample may remain visible. See [measurement definitions](verification.md#committed-processing-measurements) and [aggregates/history](verification.md#committed-aggregates-and-bounded-history). These samples are not long-term percentiles or a latency guarantee.
 
 ## Routine verification
 
@@ -166,7 +166,7 @@ For negative fault tests, the drill may assert an expected BLOCKED or INCOMPLETE
 
 **Symptoms:** a complete comparison reports DRIFT, or retained history/configuration checks fail.
 
-**Confirm:** stop new input and retain manifests, exact verifier reports, source coordinates, logs, SQL state, and output evidence. Check source incarnation, configuration, retention, and the reported first difference. Missing history is INCOMPLETE, not a successful comparison of the surviving suffix.
+**Confirm:** stop new input and retain manifests, exact verifier reports, source coordinates, logs, SQL state, and output evidence. Check source incarnation, configuration, retention, and the reported first difference. Missing history requires INCOMPLETE because comparing only the surviving suffix cannot establish agreement for the complete ledger.
 
 **Recover:** correct the cause before selecting an administrative operation. [Replay and rebuild](replay-rebuild.md) supplies exact commands and reports:
 

@@ -4,13 +4,13 @@
 
 ## 1. Design intent
 
-When an earlier stock movement changes, already-published balances and alerts may be wrong. amends repairs those results incrementally and keeps a separately implemented full-history calculation available to check them. Choosing which revision applies is **source authority**; it follows revision numbers, not arrival order.
+When an earlier stock movement changes, already-published balances and alerts may be wrong. amends repairs those results incrementally and keeps a separately implemented full-history calculation available to check them. Choosing which revision applies is **source authority**; the highest revision number determines authority independently of arrival order.
 
 The worker recalculates balances and alerts from the earliest affected day forward. That portion of history is the **affected suffix**, and recalculating it is a **refold**. Comparing the new results with previously committed results (the **diff**) identifies updates and withdrawals. Inventory receipts add units, issues remove units, and a daily close is the balance after that day's active movements. Alerts record a transition from a previous close at or above the threshold to a close below it, as worked through in [evaluation](evaluation.md#the-story-to-look-for).
 
 Processing must survive a failure between saving a correction and publishing it. PostgreSQL therefore commits the intended publications with the processing state in a **transactional outbox**; a separate relay delivers them later. Consumers keep the latest results in a **materialized view**. Withdrawals retain a deletion version, or **tombstone**, to stop delayed older messages from recreating removed results.
 
-Workers can overlap during reassignment. The database records an ownership generation (**epoch**) and refuses old-owner commits after a newer epoch is installed; this is **fencing**. It also stores the next offset to process, the exclusive **source frontier**. The view has a separate frontier for published output. These are broker coordinates, not business-record counts. A transaction already holding the ownership row lock may finish before the replacement epoch installs; Kafka reassignment is not that database boundary.
+Workers can overlap during reassignment. The database records an ownership generation (**epoch**) and refuses old-owner commits after a newer epoch is installed; this is **fencing**. It also stores the next offset to process, the exclusive **source frontier**. The view has a separate frontier for published output. These frontiers identify broker coordinates, which may have gaps between business records. A transaction already holding the ownership row lock may finish before the replacement epoch installs; Kafka reassignment is not that database boundary.
 
 [![Atomic state changes and asynchronous publication](media/architecture.svg)](media/architecture.svg)
 
@@ -81,7 +81,7 @@ commit the whole decision
 
 The implementation may validate immutable record syntax before opening the transaction, but rejection evidence and progress still commit together. Mutable authority or output state must not be read optimistically outside the lock and then committed without revalidation.
 
-Epoch installation takes the same row lock. An old transaction already holding the lock may finish first. Once the new epoch has committed, an older token must fail before committing any part of its decision. Use deterministic lock ordering and bounded database timeouts; do not perform broker publication or wait for a human while holding the transaction open.
+Epoch installation takes the same row lock. An old transaction already holding the lock may finish first. Once the new epoch has committed, an older token must fail before committing any part of its decision. This follows the [fencing-token principle](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html#making-the-lock-safe-with-fencing). Use deterministic lock ordering and bounded database timeouts; do not perform broker publication or wait for a human while holding the transaction open.
 
 A real rebalance adapter must cancel stale assignment work and park revoked workers. A database epoch cannot compensate for an obsolete callback that is incorrectly allowed to claim a new epoch. The [worker suite](source-worker.md#tests-and-limits-of-the-evidence) exercises the database and lifecycle integration.
 
@@ -103,7 +103,7 @@ Keep offset adjustment limited to obtaining and validating the external frontier
 
 Use an exact frontier with `WithEpoch(-1)` when no compatible broker leader epoch has been persisted; a broker leader epoch is distinct from the database ownership epoch. Validate topic incarnation and retained boundaries before consumption. The worker suite rejects deleted required history, changed topic incarnation/partition count, and a database frontier beyond the end. Poll release must occur on success and failure paths, with processing bounded below the rebalance timeout.
 
-The gap check exercises broker coordinates, not a decision to accept arbitrary transactional input. Source and oracle visibility must agree. Advancing through a trailing run of control/filtered records to a captured end vector still needs a validated adapter rule; neither record count nor a high-watermark alone proves processing completion. The worker suite exercises eager rebalances and database fencing. It also checks cancellation of obsolete assignment work and recovery when a database operation's acknowledgement is lost. Abrupt member loss, cooperative/server-side groups, and the complete verifier remain outside that suite.
+The gap check establishes behavior for the tested broker-coordinate gaps; support for arbitrary transactional input would require additional adapter rules and tests. Source and oracle visibility must agree. Advancing through a trailing run of control/filtered records to a captured end vector still needs a validated adapter rule; neither record count nor a high-watermark alone proves processing completion. The worker suite exercises eager rebalances and database fencing. It also checks cancellation of obsolete assignment work and recovery when a database operation's acknowledgement is lost. Abrupt member loss, cooperative/server-side groups, and the complete verifier remain outside that suite.
 
 ### Unknown commit outcome
 
@@ -115,13 +115,13 @@ Store the authoritative source position with the state. Kafka's design documenta
 
 For an ordinary revision, the worker compares old and new active contributions, computes the earliest affected day, restores the latest earlier close, and recomputes the suffix. Deletion of the only transaction on a day removes the balance row. Crossing facts are derived from daily closes, not from transaction-by-transaction intraday motion.
 
-The diff compares the newly derived semantic outputs with committed `output_state`. It emits only changed facts and required withdrawals. The table represents outputs whose intent was committed, not proof that the view has already received them.
+The diff compares the newly derived semantic outputs with committed `output_state`. It emits only changed facts and required withdrawals. The table records committed output intent, including outputs still awaiting delivery to the view.
 
 An unresolved highest revision blocks computation for its key. Other arrivals for that key are recorded, but its previous business outputs are frozen and visibly uncertified. Once the key becomes unambiguous, a full key refold avoids having to reason about every suspended incremental rewind. Repair messages precede the READY status message in that key's partition order.
 
 Choosing a conflicting value by arrival order or hash would invent source authority. Silently excluding the conflict would conceal an uncertified result. Visible BLOCKED/READY status preserves that distinction while allowing unrelated keys to continue.
 
-A blocked status is a control-plane trust signal, not a substitute for displaying the view's progress. Because downstream changes are asynchronous, a live reader can temporarily see an old status or partial repair. The complete verification boundary is the point at which the contract compares the whole business result.
+Display the blocked trust status alongside the view's progress so readers can assess both authority and delivery. Because downstream changes are asynchronous, a live reader can temporarily see an old status or partial repair. The complete verification boundary is the point at which the contract compares the whole business result.
 
 ### Why daily closes and sparse days?
 
@@ -178,7 +178,7 @@ The reference design keeps those costs visible. Representative workload measurem
 
 ## 6. Outbox and relay
 
-Allocate a per-partition emission sequence under the worker's partition lock and commit it with the outbox row. The relay operates serially within each partition, selecting the earliest pending committed envelope. One relay service per namespace preserves this order; automatic relay failover is outside the operating model.
+Allocate a per-partition emission sequence under the worker's partition lock and commit it with the outbox row ([transactional outbox pattern](https://microservices.io/patterns/data/transactional-outbox.html)). The relay operates serially within each partition, selecting the earliest pending committed envelope. One relay service per namespace preserves this order; automatic relay failover is outside the operating model.
 
 Publish the exact stored envelope, await acknowledgement, and mark it sent. If the acknowledgement is missing, retry that same version and content. A retry does not call the business diff again. A transaction that rolls back must leave no publishable envelope.
 
@@ -214,7 +214,7 @@ Correctness requires comparing the same history on both sides. Input must be sta
 
 The implemented [verifier](verification.md) acquires the owned source loader guard and the operator-stopped relay guard, captures a fixed source end vector, waits for worker progress, requires a drained outbox, captures the output end vector, and waits for the view. It compares a stable view snapshot with an independent source scan. For independently operated pipelines, the operator drains and stops/joins the relay. The [showcase runner](showcase.md) automates that handoff for its own finite pipeline; it does not adopt arbitrary processes. The [semantics](semantics.md), S10, defines exact statuses.
 
-The report must distinguish unavailable history, incomplete materialization, authority ambiguity, and actual drift. A drift report identifies the first differing key/day or alert and the relevant source coordinates, not merely a total mismatch count.
+The report must distinguish unavailable history, incomplete materialization, authority ambiguity, and actual drift. A drift report identifies the first differing key/day or alert together with the relevant source coordinates for investigation.
 
 For the combined incomplete-boundary/conflict case, the overall report is INCOMPLETE with known conflict diagnostics. Affected keys retain their BLOCKED trust status. Once the complete boundary is established, unresolved authority yields overall BLOCKED, as specified in S10.
 
@@ -228,7 +228,7 @@ An extension would need stable lineage from source positions through committed o
 
 Historical view versions could retain the projection for that cut while newer changes continue. Alternatively, a coordinated snapshot or compatible checkpoint could preserve source positions, processing/output progress, and view state together, with retained history sufficient for reconstruction. Either strategy needs explicit reconciliation positions and evidence of complete application, including withdrawals and trust-status changes. A database MVCC snapshot freezes what is visible when it starts; if that state already includes later source decisions, MVCC alone does not make it the view of H.
 
-These are architectural extensions, not v1 features. Their consistency and retention rules would need separate implementation and failure tests. The current verifier obtains the same-history guarantee by controlling source production and the relay handoff, then waiting for the view at the captured output end.
+These proposed architectural extensions remain outside v1. Their consistency and retention rules would need separate implementation and failure tests. The current verifier obtains the same-history guarantee by controlling source production and the relay handoff, then waiting for the view at the captured output end.
 
 Preserve the source history. Kafka documents retention and compaction as mechanisms that can remove records; their correct configuration is a prerequisite for this example's full-history oracle (R2, R4). Validate equivalent behavior on the pinned local broker; Kafka documentation alone does not establish Redpanda configuration parity.
 
@@ -251,7 +251,7 @@ The failure model separates **durable outcome** from **caller observation**. For
 
 Production retry loops use bounded attempts, cancellable waits, and real operation deadlines. Schedulers supply logical waits and explicit atomic effects/unknown observations. Exhaustion parks or reports the actor; it never advances a frontier. An obsolete callback cannot acquire fresh ownership, and a lost claim reply requires durable re-observation.
 
-These are bounded serial schedules, not a generic concurrent event engine. Arbitrary concurrent completions and logical deadline-expiry schedules are outside their supported model. Real PostgreSQL lock ordering and actual broker callbacks remain separate tests. The [mutation campaign](mutation-testing.md) checks whether named semantic assertions detect specific guard removals in isolated copies; it does not add runtime fault modes.
+The schedulers execute bounded serial schedules. Arbitrary concurrent completions and logical deadline-expiry schedules are outside their supported model. Real PostgreSQL lock ordering and actual broker callbacks remain separate tests. The [mutation campaign](mutation-testing.md) checks whether named semantic assertions detect specific guard removals in isolated copies; it does not add runtime fault modes.
 
 ## 11. Recovery boundaries
 
@@ -273,9 +273,9 @@ We implement processing, state management, and recovery directly so readers can 
 
 [Kafka Streams](https://kafka.apache.org/43/streams/developer-guide/processor-api/) provides stateful processing with changelog-backed state. [Apache Flink](https://nightlies.apache.org/flink/flink-docs-stable/docs/) provides managed state, recovery, and change propagation. [Materialize](https://materialize.com/docs/fundamentals/concepts/arrangements/) incrementally maintains derived results across updates and deletions. If your organization already operates one of these platforms, build on it when it meets the workload's requirements.
 
-The application must still define authoritative source revisions, conflict handling, and downstream withdrawal semantics, and establish correctness. Platforms can support these behaviors without automatically supplying Amends' complete business semantics or independent verification contract.
+The application must still define authoritative source revisions, conflict handling, and downstream withdrawal semantics, and establish correctness. Platforms can support these behaviors without automatically supplying amends' complete business semantics or independent verification contract.
 
-Temporal models make changing historical facts queryable; [bitemporal models](https://docs.xtdb.com/about/time-in-xtdb.html) track both valid time and system time. Amends additionally repairs and publishes derived balances and alerts, withdraws obsolete results, and independently checks what consumers ultimately store.
+Martin Fowler's [Bitemporal History](https://martinfowler.com/articles/bitemporal-history.html) explains valid time and system time, the dimensions supported by [bitemporal databases](https://docs.xtdb.com/about/time-in-xtdb.html). amends repairs and publishes current derived balances and alerts, withdraws obsolete results, and independently checks what consumers store; it does not offer arbitrary queries over prior system-time states.
 
 When corrections are infrequent, full recomputation is affordable, and hours of latency are acceptable, favor a straightforward batch process: it can simplify reconciliation, operation, and recovery. [dbt](https://docs.getdbt.com/docs/build/incremental-models) supports incremental transformations and full-refresh workflows for batch processing.
 

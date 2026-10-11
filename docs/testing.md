@@ -43,7 +43,7 @@ make docs-check   # Strict build, local links, source targets, and chart/fixture
 
 The link checker derives the hosting base path from the built homepage's canonical URL, which MkDocs generates from `site_url`. This supports both custom-domain roots and project subpaths, including absolute links in `404.html`. `make docs-check` also runs regression checks that preserve rejection of missing files, missing anchors, and links outside the project path.
 
-Python dependencies are pinned in [requirements-docs.txt](https://github.com/sorrell-consulting/amends/blob/main/requirements-docs.txt). Chart.js and Mermaid browser bundles are served locally and loaded only when a page needs them; [media and licenses](media/README.md#browser-libraries) records versions, provenance, and update instructions. Material's page lifecycle initializes charts after instant navigation. Check cold visits to prose, chart, and diagram pages, navigation between them, and theme changes while a library is still loading. Template overrides install the local Mermaid loader before Material, display the official logos and business-site link, and keep the repository link static, avoiding CDN fallback and API requests for repository statistics. System fonts avoid an external font dependency. The [site identity notes](media/README.md#site-identity) explain the local artwork, favicon variants, and the light default/dark optional palettes.
+Python dependencies are pinned in [requirements-docs.txt](https://github.com/sorrell-consulting/amends/blob/main/requirements-docs.txt). Chart.js and Mermaid browser bundles are served locally and loaded only when a page needs them. Material's page lifecycle initializes charts after instant navigation. Check cold visits to prose, chart, and diagram pages, navigation between them, and theme changes while a library is still loading. Template overrides install the local Mermaid loader before Material, display the official logos and business-site link, and keep the repository link static, avoiding CDN fallback and API requests for repository statistics. System fonts avoid an external font dependency.
 
 The documentation is published at [amends.sorrellconsulting.com](https://amends.sorrellconsulting.com/). The [documentation workflow](https://github.com/sorrell-consulting/amends/blob/main/.github/workflows/docs.yml) strictly builds on pull requests, pushes to `main`, and manual dispatch. Deployment and Pages artifact upload require the repository variable **`AMENDS_DOCS_PUBLISH` to equal `true`** and a non-pull-request run on `main`. The publication gate remains separate from the build checks.
 
@@ -98,11 +98,11 @@ Versions never decrease. Identical duplicates are harmless. Lower versions canno
 
 ### P07: Conflict visibility and repair
 
-Both arrival orders of conflicting highest-revision records yield a BLOCKED key, not unqualified verification success. Additional input is retained while blocked. A higher unique repair refolds all accumulated authoritative state, preserves conflict evidence, and yields an explicitly qualified verification result.
+Both arrival orders of conflicting highest-revision records yield a BLOCKED key and prevent unqualified verification success. Additional input is retained while blocked. A higher unique repair refolds all accumulated authoritative state, preserves conflict evidence, and yields an explicitly qualified verification result.
 
 ### P08: Isolation between keys and namespaces
 
-A conflict blocks only its key's computation, not ingestion for that partition or business processing for other keys. A fresh rebuild namespace cannot overwrite, resurrect, or compare versions with the original namespace.
+A conflict freezes computation for its key while ingestion for that partition and business processing for other keys continue. A fresh rebuild namespace cannot overwrite, resurrect, or compare versions with the original namespace.
 
 ### P09: Verification refuses an invalid boundary
 
@@ -130,7 +130,7 @@ The following maps all [SC01–SC28 contract scenarios](semantics.md#s12-named-s
 | SC08: Conflict at highest revision | Both arrival orders block the key; frozen values remain uncertified | Candidates, key status, output intent, and progress persist together | `source-conflict`: expected BLOCKED at a complete boundary; combined SC25 case below |
 | SC09: Conflict resolution and historical conflict | Higher unique revision repairs the whole key; historical conflict stays diagnostic | Preserve evidence; enqueue repairs before READY | `source-conflict`: qualified agreement after repair |
 | SC10: Other input during a block | Retain blocked-key arrivals; other keys proceed; resolution includes accumulated revisions | Frozen business state with advancing evidence/progress | `source-conflict` with another key on the same partition |
-| SC11: Daily, not intraday, crossings | Same-day excursions and equal-time permutations preserve daily result | None | None |
+| SC11: Daily-close crossings | Same-day excursions and equal-time permutations preserve daily result | None | None |
 | SC12: Opening balance and threshold equality | Opening below threshold and close equal to threshold create no artificial crossing | None | None |
 | SC13: Sparse days and zero-quantity activity | Restore the earlier activity close across gaps; active zero differs from cancellation | None | None |
 | SC14: Balance disappears | Cancel/move last activity; withdraw balance and refold later crossings | Persist output deletion guard atomically with progress | `disappearing-day` |
@@ -199,7 +199,7 @@ Failures save original and reduced traces under `artifacts/failures/`; `AMENDS_A
 
 ## Real database and broker coverage
 
-The [PostgreSQL suite](postgres-store.md) exercises actual transactions and both partition-row lock orders, rollback and both lost-COMMIT outcomes, fencing, atomic quarantine/outbox/frontier changes, publication receipts, view state/tombstone/progress atomicity, and consistent snapshots. Its shared memory/store conformance sample is distinct from the 256-run memory corpus. SQL concurrency claims require real SQL tests, not mocks.
+The [PostgreSQL suite](postgres-store.md) exercises actual transactions and both partition-row lock orders, rollback and both lost-COMMIT outcomes, fencing, atomic quarantine/outbox/frontier changes, publication receipts, view state/tombstone/progress atomicity, and consistent snapshots. Its shared memory/store conformance sample is distinct from the 256-run memory corpus. SQL concurrency claims require tests against an actual database.
 
 The [source suite](source-worker.md) checks explicit retained-topic configuration and source incarnation, routing/raw-key rejection, external durable seeks, guarded callback cancellation, eager rebalances, ownership replacement, and offset gaps across restart. Topic recreation, missing required history, incompatible mapping, or an out-of-range durable frontier must fail visibly. Trailing control-only offsets are not invented worker decisions.
 
